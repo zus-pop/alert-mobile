@@ -7,33 +7,35 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
-const avatar = { uri: 'https://picsum.photos/56' };
-const bell = { uri: 'https://picsum.photos/32' };
-const uiDesign = { uri: 'https://picsum.photos/80/60' };
-const uxDesign = { uri: 'https://picsum.photos/180/80' };
-const webDesign = { uri: 'https://picsum.photos/181/80' };
-const wireframe = { uri: 'https://picsum.photos/182/80' };
-const excel = { uri: 'https://picsum.photos/48' };
-const weeklyRead = { uri: 'https://picsum.photos/49' };
+const avatar = require('../../assets/images/avatar.png');
+const bell = require('../../assets/images/bell.png');
+const uiDesign = require('../../assets/images/uiDesign.png');
+const uxDesign = require('../../assets/images/uxDesign.png');
+const webDesign = require('../../assets/images/webDesign.png');
+const wireframe = require('../../assets/images/wireframe.png');
+const excel = require('../../assets/images/excel.png');
+const weeklyRead = require('../../assets/images/weeklyRead.png');
 
 const HomeScreen: React.FC = () => {
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Image source={avatar} style={styles.avatar} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.welcome}>Welcome</Text>
-          <Text style={styles.username}>Nguyen Quoc Huy</Text>
+      <SafeAreaView style={styles.headerSafeArea}>
+        <View style={styles.header}>
+          <Image source={avatar} style={styles.avatar} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.welcome}>Welcome</Text>
+            <Text style={styles.username}>Nguyen Quoc Huy</Text>
+          </View>
+          <View style={styles.bellWrap}>
+            <Image source={bell} style={styles.bell} />
+            <View style={styles.notiDot} />
+          </View>
         </View>
-        <View style={styles.bellWrap}>
-          <Image source={bell} style={styles.bell} />
-          <View style={styles.notiDot} />
-        </View>
-      </View>
+      </SafeAreaView>
 
       {/* Search */}
       <View style={styles.searchBox}>
@@ -90,16 +92,16 @@ const HomeScreen: React.FC = () => {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.readsList}>
         <View style={styles.readCard}>
           <Image source={excel} style={styles.readImage} />
-          <View>
+          <View style={styles.readTextContainer}>
             <Text style={styles.readAuthor}>Rian Mendella</Text>
-            <Text style={styles.readTitle}>How to improve Microsoft Excel Skills</Text>
+            <Text style={styles.readTitle} numberOfLines={2} ellipsizeMode="tail">How to improve Microsoft Excel Skills</Text>
           </View>
         </View>
         <View style={styles.readCard}>
           <Image source={weeklyRead} style={styles.readImage} />
-          <View>
+          <View style={styles.readTextContainer}>
             <Text style={styles.readAuthor}>John Doe</Text>
-            <Text style={styles.readTitle}>Learning Tips for Designers</Text>
+            <Text style={styles.readTitle} numberOfLines={2} ellipsizeMode="tail">Learning Tips for Designers</Text>
           </View>
         </View>
       </ScrollView>
@@ -119,7 +121,7 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.navText}>My Profile</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -127,6 +129,7 @@ export default HomeScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 16 },
+  headerSafeArea: { backgroundColor: '#fff', paddingTop: 12 },
   header: { flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 8 },
   avatar: { width: 56, height: 56, borderRadius: 28, marginRight: 12 },
   welcome: { color: '#B0B0B0', fontSize: 16 },
@@ -146,8 +149,8 @@ const styles = StyleSheet.create({
   progressText: { color: '#2B3A67', fontWeight: 'bold', fontSize: 12, marginLeft: 'auto', marginRight: 8 },
   sectionTitle: { fontWeight: 'bold', fontSize: 20, color: '#2B3A67', marginTop: 12, marginBottom: 8 },
   courseList: { flexDirection: 'row', marginBottom: 8 },
-  courseCard: { backgroundColor: '#fff', borderRadius: 16, padding: 12, marginRight: 12, width: 180, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  courseImage: { width: '100%', height: 80, borderRadius: 10, marginBottom: 8 },
+  courseCard: { backgroundColor: '#fff', borderRadius: 16, padding: 8, marginRight: 12, width: 180, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  courseImage: { width: '100%', height: 110, borderRadius: 10, marginBottom: 8 },
   courseCardTitle: { fontWeight: 'bold', fontSize: 16, color: '#2B3A67' },
   courseCardDesc: { color: '#B0B0B0', fontSize: 13, marginBottom: 8 },
   keepLearningBtn: { backgroundColor: '#2B3A67', borderRadius: 8, paddingVertical: 6, alignItems: 'center' },
@@ -155,8 +158,9 @@ const styles = StyleSheet.create({
   seeAllBtn: { alignSelf: 'center', marginVertical: 6, paddingHorizontal: 16, paddingVertical: 4, borderRadius: 16, borderWidth: 1, borderColor: '#2B3A67' },
   seeAllText: { color: '#2B3A67', fontWeight: 'bold', fontSize: 14 },
   readsList: { flexDirection: 'row', marginBottom: 8 },
-  readCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F6FA', borderRadius: 12, padding: 10, marginRight: 12, width: 220 },
-  readImage: { width: 48, height: 48, borderRadius: 8, marginRight: 10 },
+  readCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F6FA', borderRadius: 12, padding: 10, marginRight: 12, width: 220, height: 150 },
+  readImage: { width: 100, height: 120, borderRadius: 10, marginRight: 10 },
+  readTextContainer: { flex: 1, paddingRight: 8, overflow: 'hidden' },
   readAuthor: { color: '#B0B0B0', fontSize: 12 },
   readTitle: { color: '#2B3A67', fontWeight: 'bold', fontSize: 14 },
   bottomNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F5F6FA', borderRadius: 24, padding: 10, marginTop: 8, marginBottom: 8 },
