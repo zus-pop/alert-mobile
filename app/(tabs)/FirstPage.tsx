@@ -3,12 +3,6 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 export default function FirstPage() {
   return (
     <View style={styles.container}>
-      {/* Status Bar Placeholder */}
-      <View style={styles.statusBar}>
-        <Text style={styles.statusBarText}>09:41</Text>
-        <View style={styles.statusBarIcons} />
-      </View>
-
       {/* Main Illustration Banner */}
       <Image source={require('@/assets/images/banner.png')} style={styles.banner} resizeMode="contain" />
 
@@ -47,35 +41,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#00b4d8',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 40,
-  },
-  statusBar: {
-    width: '100%',
-    height: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    marginBottom: 16,
-  },
-  statusBarText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000',
-    fontFamily: 'Montserrat',
-  },
-  statusBarIcons: {
-    width: 60,
-    height: 20,
-    backgroundColor: '#eee',
-    borderRadius: 8,
+    paddingTop: 60,
   },
   banner: {
+    marginTop: 40,
     width: 220,
     height: 180,
     borderRadius: 24,
     marginBottom: 32,
-    backgroundColor: '#f5f5f5',
   },
   title: {
     fontSize: 64,
@@ -140,7 +113,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   googleIcon: {
-    width: 36,
-    height: 36,
+    width: 600,
+    marginLeft: 40
   },
 });
