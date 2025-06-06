@@ -1,6 +1,9 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function FirstPage() {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
       {/* Main Illustration Banner */}
@@ -14,10 +17,10 @@ export default function FirstPage() {
         Pick Your Next Challenge Pick Your Next Pick Your Next Challenge
       </Text>
 
-      {/* Sign In Button Placeholder */}
-      <View style={styles.signInButton}>
+      {/* Sign In Button */}
+      <TouchableOpacity style={styles.signInButton} onPress={() => router.push('./login')}>
         <Text style={styles.signInButtonText}>Sign In</Text>
-      </View>
+      </TouchableOpacity>
 
       {/* Sign Up Button Placeholder */}
       <View style={styles.signUpButton}>
@@ -46,7 +49,7 @@ const styles = StyleSheet.create({
   banner: {
     marginTop: 40,
     width: 220,
-    height: 180,
+    height: 200,
     borderRadius: 24,
     marginBottom: 32,
   },
