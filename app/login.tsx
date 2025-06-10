@@ -1,22 +1,18 @@
-import { useNavigation } from 'expo-router';
-import React, { useLayoutEffect } from 'react';
+import { useRouter } from 'expo-router';
+import React from 'react';
 import { Dimensions, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
 export default function Login() {
-  const navigation = useNavigation();
-
-  useLayoutEffect(() => {
-    navigation.setOptions?.({ headerShown: false });
-  }, [navigation]);
+  const router = useRouter();
 
   return (
     <View style={styles.container}>
       <Image
-  source={require('@/assets/images/banner.png')}
-  style={styles.banner}
-/>
+        source={require('@/assets/images/banner.png')}
+        style={styles.banner}
+      />
       {/* White Card at the bottom */}
       <View style={styles.whiteCard}>
         <View style={styles.content}>
@@ -45,17 +41,17 @@ export default function Login() {
           </View>
 
           {/* Forgot Password link */}
-          <TouchableOpacity style={styles.forgotPassword} onPress={() => {/* Xử lý điều hướng quên mật khẩu ở đây */}}>
+          <TouchableOpacity style={styles.forgotPassword} onPress={() => {}}>
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
           {/* Sign In Button */}
-          <TouchableOpacity style={styles.signInButton}>
+          <TouchableOpacity style={styles.signInButton} onPress={() => router.replace('/(tabs)/home')}>
             <Text style={styles.signInButtonText}>Sign In</Text>
           </TouchableOpacity>
 
           {/* Back Button */}
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
         </View>
