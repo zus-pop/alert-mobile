@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Image,
   SafeAreaView,
@@ -7,19 +7,22 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
-} from 'react-native';
+  View,
+} from "react-native";
+import { useAuthStore } from "../../stores/useAuthStore";
 
-const avatar = require('../../assets/images/avatar.png');
-const bell = require('../../assets/images/bell.png');
-const uiDesign = require('../../assets/images/uiDesign.png');
-const uxDesign = require('../../assets/images/uxDesign.png');
-const webDesign = require('../../assets/images/webDesign.png');
-const wireframe = require('../../assets/images/wireframe.png');
-const excel = require('../../assets/images/excel.png');
-const weeklyRead = require('../../assets/images/weeklyRead.png');
+const avatar = require("../../assets/images/avatar.png");
+const bell = require("../../assets/images/bell.png");
+const uiDesign = require("../../assets/images/uiDesign.png");
+const uxDesign = require("../../assets/images/uxDesign.png");
+const webDesign = require("../../assets/images/webDesign.png");
+const wireframe = require("../../assets/images/wireframe.png");
+const excel = require("../../assets/images/excel.png");
+const weeklyRead = require("../../assets/images/weeklyRead.png");
 
 const HomeScreen: React.FC = () => {
+  const token = useAuthStore((state) => state.token);
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -57,7 +60,11 @@ const HomeScreen: React.FC = () => {
 
       {/* My Course */}
       <Text style={styles.sectionTitle}>My Course</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.courseList}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.courseList}
+      >
         <View style={styles.courseCard}>
           <Image source={uxDesign} style={styles.courseImage} />
           <Text style={styles.courseCardTitle}>UX Design Course</Text>
@@ -89,19 +96,35 @@ const HomeScreen: React.FC = () => {
 
       {/* Weekly Reads */}
       <Text style={styles.sectionTitle}>Weekly Reads</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.readsList}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.readsList}
+      >
         <View style={styles.readCard}>
           <Image source={excel} style={styles.readImage} />
           <View style={styles.readTextContainer}>
             <Text style={styles.readAuthor}>Rian Mendella</Text>
-            <Text style={styles.readTitle} numberOfLines={2} ellipsizeMode="tail">How to improve Microsoft Excel Skills</Text>
+            <Text
+              style={styles.readTitle}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              How to improve Microsoft Excel Skills
+            </Text>
           </View>
         </View>
         <View style={styles.readCard}>
           <Image source={weeklyRead} style={styles.readImage} />
           <View style={styles.readTextContainer}>
             <Text style={styles.readAuthor}>John Doe</Text>
-            <Text style={styles.readTitle} numberOfLines={2} ellipsizeMode="tail">Learning Tips for Designers</Text>
+            <Text
+              style={styles.readTitle}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              Learning Tips for Designers
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -128,43 +151,144 @@ const HomeScreen: React.FC = () => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 16 },
-  headerSafeArea: { backgroundColor: '#fff', paddingTop: 12 },
-  header: { flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 8 },
+  container: { flex: 1, backgroundColor: "#fff", paddingHorizontal: 16 },
+  headerSafeArea: { backgroundColor: "#fff", paddingTop: 12 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 16,
+    marginBottom: 8,
+  },
   avatar: { width: 56, height: 56, borderRadius: 28, marginRight: 12 },
-  welcome: { color: '#B0B0B0', fontSize: 16 },
-  username: { color: '#2B3A67', fontWeight: 'bold', fontSize: 20 },
-  bellWrap: { position: 'relative', marginLeft: 8 },
+  welcome: { color: "#B0B0B0", fontSize: 16 },
+  username: { color: "#2B3A67", fontWeight: "bold", fontSize: 20 },
+  bellWrap: { position: "relative", marginLeft: 8 },
   bell: { width: 32, height: 32 },
-  notiDot: { position: 'absolute', top: 2, right: 2, width: 10, height: 10, borderRadius: 5, backgroundColor: '#F55A5A', borderWidth: 2, borderColor: '#fff' },
+  notiDot: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#F55A5A",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
   searchBox: { marginVertical: 12 },
-  searchInput: { backgroundColor: '#F5F6FA', borderRadius: 24, paddingHorizontal: 20, height: 40, fontSize: 16 },
-  featuredCourse: { flexDirection: 'row', backgroundColor: '#7EC8E3', borderRadius: 20, padding: 16, alignItems: 'center', marginBottom: 12 },
+  searchInput: {
+    backgroundColor: "#F5F6FA",
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    height: 40,
+    fontSize: 16,
+  },
+  featuredCourse: {
+    flexDirection: "row",
+    backgroundColor: "#7EC8E3",
+    borderRadius: 20,
+    padding: 16,
+    alignItems: "center",
+    marginBottom: 12,
+  },
   featuredImage: { width: 80, height: 60, borderRadius: 10, marginRight: 16 },
   featuredInfo: { flex: 1 },
-  featuredTitle: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
-  featuredDesc: { color: '#E0F7FA', fontSize: 14, marginBottom: 8 },
-  progressBarBg: { backgroundColor: '#B2EBF2', borderRadius: 8, height: 16, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
-  progressBarFill: { backgroundColor: '#fff', width: '70%', height: 16, borderRadius: 8, position: 'absolute', left: 0, top: 0 },
-  progressText: { color: '#2B3A67', fontWeight: 'bold', fontSize: 12, marginLeft: 'auto', marginRight: 8 },
-  sectionTitle: { fontWeight: 'bold', fontSize: 20, color: '#2B3A67', marginTop: 12, marginBottom: 8 },
-  courseList: { flexDirection: 'row', marginBottom: 8 },
-  courseCard: { backgroundColor: '#fff', borderRadius: 16, padding: 8, marginRight: 12, width: 180, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  courseImage: { width: '100%', height: 110, borderRadius: 10, marginBottom: 8 },
-  courseCardTitle: { fontWeight: 'bold', fontSize: 16, color: '#2B3A67' },
-  courseCardDesc: { color: '#B0B0B0', fontSize: 13, marginBottom: 8 },
-  keepLearningBtn: { backgroundColor: '#2B3A67', borderRadius: 8, paddingVertical: 6, alignItems: 'center' },
-  keepLearningText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  seeAllBtn: { alignSelf: 'center', marginVertical: 6, paddingHorizontal: 16, paddingVertical: 4, borderRadius: 16, borderWidth: 1, borderColor: '#2B3A67' },
-  seeAllText: { color: '#2B3A67', fontWeight: 'bold', fontSize: 14 },
-  readsList: { flexDirection: 'row', marginBottom: 8 },
-  readCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F6FA', borderRadius: 12, padding: 10, marginRight: 12, width: 220, height: 150 },
+  featuredTitle: { color: "#fff", fontWeight: "bold", fontSize: 18 },
+  featuredDesc: { color: "#E0F7FA", fontSize: 14, marginBottom: 8 },
+  progressBarBg: {
+    backgroundColor: "#B2EBF2",
+    borderRadius: 8,
+    height: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    backgroundColor: "#fff",
+    width: "70%",
+    height: 16,
+    borderRadius: 8,
+    position: "absolute",
+    left: 0,
+    top: 0,
+  },
+  progressText: {
+    color: "#2B3A67",
+    fontWeight: "bold",
+    fontSize: 12,
+    marginLeft: "auto",
+    marginRight: 8,
+  },
+  sectionTitle: {
+    fontWeight: "bold",
+    fontSize: 20,
+    color: "#2B3A67",
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  courseList: { flexDirection: "row", marginBottom: 8 },
+  courseCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 8,
+    marginRight: 12,
+    width: 180,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  courseImage: {
+    width: "100%",
+    height: 110,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  courseCardTitle: { fontWeight: "bold", fontSize: 16, color: "#2B3A67" },
+  courseCardDesc: { color: "#B0B0B0", fontSize: 13, marginBottom: 8 },
+  keepLearningBtn: {
+    backgroundColor: "#2B3A67",
+    borderRadius: 8,
+    paddingVertical: 6,
+    alignItems: "center",
+  },
+  keepLearningText: { color: "#fff", fontWeight: "bold", fontSize: 14 },
+  seeAllBtn: {
+    alignSelf: "center",
+    marginVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#2B3A67",
+  },
+  seeAllText: { color: "#2B3A67", fontWeight: "bold", fontSize: 14 },
+  readsList: { flexDirection: "row", marginBottom: 8 },
+  readCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F6FA",
+    borderRadius: 12,
+    padding: 10,
+    marginRight: 12,
+    width: 220,
+    height: 150,
+  },
   readImage: { width: 100, height: 120, borderRadius: 10, marginRight: 10 },
-  readTextContainer: { flex: 1, paddingRight: 8, overflow: 'hidden' },
-  readAuthor: { color: '#B0B0B0', fontSize: 12 },
-  readTitle: { color: '#2B3A67', fontWeight: 'bold', fontSize: 14 },
-  bottomNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F5F6FA', borderRadius: 24, padding: 10, marginTop: 8, marginBottom: 8 },
-  navItem: { alignItems: 'center', flex: 1 },
-  navText: { color: '#B0B0B0', fontSize: 13 },
-  navTextActive: { color: '#2B3A67', fontWeight: 'bold', fontSize: 13 },
+  readTextContainer: { flex: 1, paddingRight: 8, overflow: "hidden" },
+  readAuthor: { color: "#B0B0B0", fontSize: 12 },
+  readTitle: { color: "#2B3A67", fontWeight: "bold", fontSize: 14 },
+  bottomNav: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#F5F6FA",
+    borderRadius: 24,
+    padding: 10,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  navItem: { alignItems: "center", flex: 1 },
+  navText: { color: "#B0B0B0", fontSize: 13 },
+  navTextActive: { color: "#2B3A67", fontWeight: "bold", fontSize: 13 },
 });
