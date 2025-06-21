@@ -4,9 +4,11 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 interface AuthState {
-  token: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
   user: any;
-  setToken: (t: string) => void;
+  setAccessToken: (t: string) => void;
+  setRefreshToken: (t: string) => void;
   setUser: (u: any) => void;
   logout: () => void;
 }
@@ -14,11 +16,13 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      token: null,
+      accessToken: null,
+      refreshToken: null,
       user: null,
-      setToken: (t) => set({ token: t }),
+      setAccessToken: (t) => set({ accessToken: t }),
+      setRefreshToken: (t) => set({ refreshToken: t }),
       setUser: (u) => set({ user: u }),
-      logout: () => set({ token: null, user: null }),
+      logout: () => set({ accessToken: null, user: null }),
     }),
     {
       name: "auth-storage",

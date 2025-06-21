@@ -5,7 +5,7 @@ import { useGoogleLogin } from "../hooks/useGoogleLogin";
 import { useAuthStore } from "../stores/useAuthStore";
 
 export default function Index() {
-  const token = useAuthStore((state) => state.token);
+  const token = useAuthStore((state) => state.accessToken);
   useEffect(() => {
     if (token) {
       router.replace("/(tabs)/home");
