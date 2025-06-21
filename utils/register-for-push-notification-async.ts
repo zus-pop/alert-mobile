@@ -2,6 +2,7 @@ import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notification from "expo-notifications";
 import { Platform } from "react-native";
+import { toast } from "sonner-native";
 
 export async function registerForPushNotificationsAsync() {
   let token: string | null = null;
@@ -48,6 +49,6 @@ export async function registerForPushNotificationsAsync() {
 }
 
 function handleRegistrationError(errorMessage: string) {
-  alert(errorMessage);
+  toast.error(errorMessage);
   //   throw new Error(errorMessage);
 }
