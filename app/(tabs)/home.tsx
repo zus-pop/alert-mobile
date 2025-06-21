@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Image,
   SafeAreaView,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useNotification } from "../../contexts/notification-provider";
 import { useAuthStore } from "../../stores/useAuthStore";
 
 const avatar = require("../../assets/images/avatar.png");
@@ -21,7 +22,12 @@ const excel = require("../../assets/images/excel.png");
 const weeklyRead = require("../../assets/images/weeklyRead.png");
 
 const HomeScreen: React.FC = () => {
-  const token = useAuthStore((state) => state.token);
+  const token = useAuthStore((state) => state.accessToken);
+  const { requestPushToken } = useNotification();
+
+  useEffect(() => {
+    requestPushToken();
+  }, []);
 
   return (
     <View style={styles.container}>

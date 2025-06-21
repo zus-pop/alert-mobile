@@ -3,17 +3,20 @@ import { useEffect } from "react";
 import { useAuthStore } from "../stores";
 
 const AuthGoogleRedirect = () => {
-  const { access_token } = useGlobalSearchParams();
-  const setToken = useAuthStore((state) => state.setToken);
+  const { accessToken, refreshToken } = useGlobalSearchParams<{
+    accessToken: string;
+    refreshToken: string;
+  }>();
+  const setAccessToken = useAuthStore((state) => state.setAccessToken);
+  const setRefreshToken = useAuthStore((state) => state.setRefreshToken);
 
   useEffect(() => {
-    if (access_token) {
-      if (access_token) {
-        setToken(access_token as string);
-        router.replace("/home");
-      }
-    }
-  }, [access_token]);
+    if (accessToken) setAccessToken(accessToken as string);
+
+    if (refreshToken) setRefreshToken(refreshToken as string);
+
+    router.replace("/home");
+  }, [accessToken, refreshToken]);
 
   return null;
 };
