@@ -7,13 +7,14 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { updatePushToken } from "../apis/auth.api";
+import { removePushToken, updatePushToken } from "../apis/auth.api";
 import { registerForPushNotificationsAsync } from "../utils/register-for-push-notification-async";
 
 interface NotificationContextType {
   expoPushToken: string | null;
   notification: Notifications.Notification | null;
   requestPushToken: () => Promise<void>;
+  deletePushToken: () => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
@@ -37,7 +38,7 @@ interface NotificationProviderProps {
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   children,
 }) => {
-  const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
+  const [pushToken, setPushToken] = useState<string | null>(null);
   const [notification, setNotification] =
     useState<Notifications.Notification | null>(null);
 
@@ -48,8 +49,20 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     try {
       const token = await registerForPushNotificationsAsync();
       if (token) {
-        setExpoPushToken(token);
+        setPushToken(token);
         updatePushToken(token);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const deletePushToken = async () => {
+    try {
+      const token = await registerForPushNotificationsAsync();
+      if (token) {
+        setPushToken(null);
+        await removePushToken(token);
       }
     } catch (error) {
       console.log(error);
@@ -87,7 +100,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 
   return (
     <NotificationContext.Provider
-      value={{ expoPushToken, notification, requestPushToken }}
+      value={{
+        expoPushToken: pushToken,
+        notification,
+        requestPushToken,
+        deletePushToken,
+      }}
     >
       {children}
     </NotificationContext.Provider>
