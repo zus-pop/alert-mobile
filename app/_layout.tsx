@@ -1,8 +1,8 @@
 import { useColorScheme } from "@/hooks/useColorScheme";
 import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
+    DarkTheme,
+    DefaultTheme,
+    ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import * as Notification from "expo-notifications";
@@ -10,6 +10,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Toaster } from "sonner-native";
+import Loading from "../components/loading";
 import { NotificationProvider } from "../contexts/notification-provider";
 
 Notification.setNotificationHandler({
@@ -29,7 +30,7 @@ export default function RootLayout() {
 
   if (!loaded) {
     // Async font loading only occurs in development.
-    return null;
+    return <Loading visible/>;
   }
 
   return (
@@ -46,7 +47,7 @@ export default function RootLayout() {
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
-        <Toaster richColors />
+        <Toaster richColors swipeToDismissDirection="left" />
       </GestureHandlerRootView>
     </NotificationProvider>
   );
