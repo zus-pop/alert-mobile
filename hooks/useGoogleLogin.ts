@@ -1,5 +1,6 @@
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
+import { toast } from "sonner-native";
 
 export function useGoogleLogin() {
   const login = async () => {
@@ -10,10 +11,10 @@ export function useGoogleLogin() {
 
     const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
-    if (result.type === "success" && result.url) {
-      console.log("success");
+    if (result.type === "success") {
+      //   console.log(result);
     } else {
-      console.log("Login cancelled or failed.");
+      toast.info("Login cancelled or failed.");
     }
   };
 
