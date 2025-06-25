@@ -1,21 +1,24 @@
 import { router } from "expo-router";
 import React from "react";
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { useNotification } from "../../contexts/notification-provider";
 import { useAuthStore } from "../../stores/useAuthStore";
 
 const Profile: React.FC = () => {
   const logout = useAuthStore((state) => state.logout);
+  const { deletePushToken } = useNotification();
+
+  const handleLogout = async () => {
+    await deletePushToken();
+    logout();
+    router.replace("/");
+  };
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.center}>
         <Text style={styles.title}>My Profile</Text>
         <Text style={styles.placeholder}>This is the My Profile screen.</Text>
-        <Pressable
-          onPress={() => {
-            logout();
-            router.replace("/");
-          }}
-        >
+        <Pressable onPress={handleLogout}>
           <Text style={styles.placeholder}>Log out</Text>
         </Pressable>
       </View>
