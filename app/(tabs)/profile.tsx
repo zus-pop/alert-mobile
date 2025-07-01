@@ -1,110 +1,338 @@
-import { router } from "expo-router";
-import React, { useEffect } from "react";
-import { Image, Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
-import { setUser as fetchUserFromAPI } from "../../apis/auth.api";
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  FlatList,
+} from 'react-native';
+import { Enrollment, EnrollmentStatusGroup, getStudentEnrollments } from '../../apis/enrollments.api';
+import LogoutModal from '../../components/LogoutModal';
 import { useNotification } from "../../contexts/notification-provider";
-import { useAuthStore } from "../../stores/useAuthStore";
+import { useAuthStore } from '../../stores/useAuthStore';
+interface StatItem {
+  label: string;
+  count: number;
+  color: string;
+}
 
-const Profile: React.FC = () => {
-  const logout = useAuthStore((state) => state.logout);
-  const user = useAuthStore((state) => state.user);
-  const token = useAuthStore((state) => state.accessToken);
-  const setUser = useAuthStore((state) => state.setUser);
+export default function ProfileScreen() {
+  const { user, logout } = useAuthStore();
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [enrollmentStats, setEnrollmentStats] = useState<EnrollmentStatusGroup[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const { deletePushToken } = useNotification();
+  const fetchEnrollments = async () => {
+    if (!user?._id) return;
 
-  // Fetch user if we have token but no user data
-  useEffect(() => {
-    if (token && !user) {
-      fetchUserFromAPI()
-        .then(setUser)
-        .catch(console.error);
+    try {
+      const response = await getStudentEnrollments(user._id);
+      setEnrollments(response.data);
+      setEnrollmentStats(response.groupByEnrollmentStatus || []);
+    } catch (error) {
+      console.error('Error fetching enrollments:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  }, [token, user]);
-
-  const handleLogout = async () => {
-    await deletePushToken();
-    logout();
-    router.replace("/");
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.center}>
-        <Text style={styles.title}>My Profile</Text>
+  useEffect(() => {
+    fetchEnrollments();
+  }, [user]);
 
-        {user && (
-          <View style={styles.userInfo}>
-            {user.image && (
-              <Image
-                source={{ uri: user.image }}
-                style={styles.profileImage}
-              />
-            )}
-            <Text style={styles.userName}>
-              {user.firstName} {user.lastName}
-            </Text>
-            <Text style={styles.userEmail}>{user.email}</Text>
-            {user.studentCode && (
-              <Text style={styles.studentCode}>ID: {user.studentCode}</Text>
-            )}
-          </View>
-        )}
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchEnrollments();
+  };
 
-        <Pressable onPress={handleLogout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Log out</Text>
-        </Pressable>
+  const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await deletePushToken();
+      logout();
+      router.replace('/auth');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      setLoggingOut(false);
+      setShowLogoutModal(false);
+    }
+  };
+
+  const getStats = (): StatItem[] => {
+    // Chỉ sử dụng dữ liệu từ API, nếu không có thì hiển thị N/A
+    if (enrollmentStats.length > 0) {
+      const totalCourses = enrollmentStats.reduce((sum, stat) => sum + stat.count, 0);
+      const passedCourses = enrollmentStats.find(stat => stat.status === 'PASSED')?.count || 0;
+      const failedCourses = enrollmentStats.find(stat => stat.status === 'NOT PASSED')?.count || 0;
+
+      return [
+        { label: 'Course', count: totalCourses, color: '#3B82F6' },
+        { label: 'Pass', count: passedCourses, color: '#10B981' },
+        { label: 'Fail', count: failedCourses, color: '#EF4444' },
+      ];
+    }
+
+    // Hiển thị N/A khi không có dữ liệu từ API
+    return [
+      { label: 'Course', count: 0, color: '#3B82F6' },
+      { label: 'Pass', count: 0, color: '#10B981' },
+      { label: 'Fail', count: 0, color: '#EF4444' },
+    ];
+  };
+
+  const getInProgressCourses = () => {
+    return enrollments.filter(enrollment => enrollment.status === 'IN PROGRESS');
+  };
+
+  if (loading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white">
+        <ActivityIndicator size="large" color="#3B82F6" />
       </View>
-    </SafeAreaView>
-  );
-};
+    );
+  }
 
-export default Profile;
+  return (
+    <ScrollView
+      className="flex-1 bg-white"
+      contentContainerStyle={{ paddingBottom: 100 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      {/* Banner */}
+      <View className="relative" style={styles.bannerContainer}>
+        <Image
+          source={require('../../assets/images/uxDesign.png')}
+          className="w-full"
+          style={styles.bannerImage}
+          resizeMode="cover"
+        />
+      </View>
+
+      {/* Profile Info */}
+      <View className="px-6 relative z-10" style={styles.profileContainer}>
+        <View className="flex-row items-end justify-between" style={styles.headerContainer}>
+          {/* Avatar */}
+          <View className="bg-white rounded-full p-1 shadow-lg" style={styles.avatarContainer}>
+            <Image
+              source={
+                user?.image
+                  ? { uri: user.image }
+                  : require('../../assets/images/avatar.png')
+              }
+              className="rounded-full"
+              style={styles.avatar}
+            />
+          </View>
+
+          {/* Settings Icon */}
+          <TouchableOpacity
+            onPress={handleLogout}
+            className=" rounded-full p-3 shadow-lg"
+            style={styles.settingsButton}
+          >
+            <Ionicons name="settings-outline" size={24} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
+
+        {/* User Info */}
+        <View style={styles.userInfoContainer}>
+          <Text style={styles.userName}>
+            {user?.firstName} {user?.lastName}
+          </Text>
+          <Text style={styles.studentCode}>
+            {user?.studentCode}
+          </Text>
+          <Text style={styles.userDescription}>
+            Pick Your Next Challenge Pick Your Next Pick Your Next Challenge
+          </Text>
+        </View>
+
+        {/* Stats Bar */}
+        <View className="flex-row bg-gray-50 rounded-xl" style={styles.statsContainer}>
+          {getStats().map((stat, index) => (
+            <View key={stat.label} className="flex-1">
+              <View className="items-center">
+                <Text
+                  className="text-2xl font-bold"
+                  style={{ color: stat.color }}
+                >
+                  {enrollmentStats.length > 0 ? stat.count : 'N/A'}
+                </Text>
+                <Text className="text-sm text-gray-600">{stat.label}</Text>
+              </View>
+              {index < getStats().length - 1 && (
+                <View className="absolute right-0 top-0 bottom-0 w-px bg-gray-300" />
+              )}
+            </View>
+          ))}
+        </View>
+
+        {/* Latest Course Section */}
+        <View className="mt-8">
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-xl font-bold text-gray-900">Latest Course</Text>
+            <TouchableOpacity className="flex-row items-center bg-gray-100 px-3 py-2 rounded-lg">
+              <Ionicons name="filter-outline" size={16} color="#6B7280" />
+              <Text className="text-gray-600 ml-1">Filter</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Course List - Vertical column, không FlatList/ScrollView con */}
+          {getInProgressCourses().length > 0 ? (
+            getInProgressCourses().map((enrollment) => (
+              <View key={enrollment._id} style={[styles.latestCourseCard, { marginBottom: 12 }]}> 
+                {typeof enrollment.courseId === 'object' && 'image' in enrollment.courseId && enrollment.courseId.image ? (
+                  <Image
+                    source={{ uri: (enrollment.courseId as any).image }}
+                    style={styles.courseImage}
+                  />
+                ) : (
+                  <View style={[styles.courseImage, { backgroundColor: '#F5F6FA', borderRadius: 8 }]} />
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: 'bold', color: '#222', fontSize: 15 }}>
+                    {enrollment.courseId?.subjectId?.subjectName || 'Unknown Subject'}
+                  </Text>
+                  <Text style={{ color: '#666', fontSize: 13 }}>
+                    {enrollment.courseId?.subjectId?.subjectCode}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                    <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
+                      <Text style={{ color: '#2563EB', fontSize: 12, fontWeight: '500' }}>
+                        {enrollment.status}
+                      </Text>
+                    </View>
+                    {enrollment.grade.length > 0 && (
+                      <View style={{ marginLeft: 8, backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
+                        <Text style={{ color: '#666', fontSize: 12 }}>
+                          Grade: {enrollment.grade[enrollment.grade.length - 1]?.score || 'N/A'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </View>
+            ))
+          ) : (
+            <View className="items-center py-8">
+              <Image
+                source={require('../../assets/images/coursenotfound.png')}
+                className="opacity-50"
+                style={styles.emptyStateImage}
+              />
+              <Text className="text-gray-500 mt-4">No courses in progress</Text>
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* Logout Modal */}
+      <LogoutModal
+        visible={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={confirmLogout}
+        loading={loggingOut}
+      />
+    </ScrollView>
+  );
+}
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#2B3A67",
-    marginBottom: 12,
+  bannerContainer: {
+    minHeight: 150,
+    maxHeight: 200,
+    height: 180,
   },
-  placeholder: { fontSize: 16, color: "#B0B0B0" },
-  userInfo: {
-    alignItems: "center",
-    marginVertical: 20,
+  bannerImage: {
+    minHeight: 120,
+    maxHeight: 270,
+    height: 270,
   },
-  profileImage: {
+  profileContainer: {
+    marginTop: -40,
+  },
+  headerContainer: {
+    marginBottom: 16,
+  },
+  avatarContainer: {
+    marginTop: 90,
+    alignSelf: 'flex-start',
+  },
+  avatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    marginBottom: 12,
+  },
+  settingsButton: {
+    alignSelf: 'flex-end',
+  },
+  userInfoContainer: {
+    marginTop: -10,
+    marginBottom: 10,
   },
   userName: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#2B3A67",
-    marginBottom: 4,
-  },
-  userEmail: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 4,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
   },
   studentCode: {
+    fontSize: 18,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  userDescription: {
     fontSize: 14,
-    color: "#888",
+    color: '#9CA3AF',
+    marginTop: 4,
   },
-  logoutButton: {
-    backgroundColor: "#FF6B6B",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+  statsContainer: {
+    marginTop: 16,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  courseImage: {
+    width: 50,
+    height: 55,
     borderRadius: 8,
-    marginTop: 20,
+    minHeight: 50,
+    maxHeight: 55,
+    marginRight: 12,
   },
-  logoutText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+  emptyStateImage: {
+    width: 96,
+    height: 96,
+    minHeight: 80,
+    maxHeight: 120,
+  },
+  latestCourseCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 10,
+    minWidth: 200,
+    maxWidth: 500,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
 });

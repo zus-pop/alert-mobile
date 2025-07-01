@@ -10,7 +10,6 @@ const MyCourse: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuthStore();
 
-  // API call to fetch enrollments
   const fetchEnrollments = async () => {
     try {
       setLoading(true);
@@ -22,8 +21,7 @@ const MyCourse: React.FC = () => {
       }
 
       const response = await getStudentEnrollments(user._id);
-      console.log(response.data);
-
+      console.log('Fetched enrollments:', response.data);
       // Filter out enrollments with null subjectId
       const validEnrollments = response.data.filter(enrollment =>
         enrollment.courseId.subjectId !== null
@@ -78,7 +76,7 @@ const MyCourse: React.FC = () => {
               styles.progressForeground,
               {
                 borderColor: color,
-                transform: [{ rotate: `${(score / 10) * 360}deg` }] // Score out of 10
+                transform: [{ rotate: `${(score / 10) * 360}deg` }]
               }
             ]}
           />
@@ -155,15 +153,25 @@ const MyCourse: React.FC = () => {
                       <Text style={styles.courseDetail}>
                         End date: {formatDate(enrollment.courseId.semesterId.endDate)}
                       </Text>
-                      <Text style={[
-                        styles.courseDetail,
-                        {
-                          color: enrollment.status === 'PASSED' ? '#4CAF50' : '#FF6B35',
-                          fontWeight: '600'
-                        }
-                      ]}>
-                        Status: {enrollment.status}
-                      </Text>
+
+                      <View style={styles.statusContainer}>
+                        <Text style={styles.statusLabel}>Status: </Text>
+                        <View style={[
+                          styles.statusBadge,
+                          enrollment.status === 'PASSED' && styles.statusPassed,
+                          enrollment.status === 'IN PROGRESS' && styles.statusInProgress,
+                          enrollment.status === 'NOT PASSED' && styles.statusNotPassed,
+                        ]}>
+                          <Text style={[
+                            styles.statusText,
+                            enrollment.status === 'PASSED' && styles.statusPassedText,
+                            enrollment.status === 'IN PROGRESS' && styles.statusInProgressText,
+                            enrollment.status === 'NOT PASSED' && styles.statusNotPassedText,
+                          ]}>
+                            {enrollment.status}
+                          </Text>
+                        </View>
+                      </View>
 
                       <View style={styles.sessionInfo}>
                         <Ionicons name="calendar-outline" size={16} color="#666" />
@@ -399,5 +407,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     fontWeight: '500',
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statusLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 4,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statusPassed: {
+    backgroundColor: '#E8F5E8',
+  },
+  statusPassedText: {
+    color: '#4CAF50',
+  },
+  statusInProgress: {
+    backgroundColor: '#FFF3E0',
+  },
+  statusInProgressText: {
+    color: '#FF9800',
+  },
+  statusNotPassed: {
+    backgroundColor: '#FFEBEE',
+  },
+  statusNotPassedText: {
+    color: '#F44336',
   },
 }); 
