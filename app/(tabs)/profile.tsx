@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  FlatList,
 } from 'react-native';
 import { Enrollment, EnrollmentStatusGroup, getStudentEnrollments } from '../../apis/enrollments.api';
 import LogoutModal from '../../components/LogoutModal';
@@ -109,6 +110,7 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       className="flex-1 bg-white"
+      contentContainerStyle={{ paddingBottom: 100 }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
@@ -192,37 +194,38 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Course List */}
+          {/* Course List - Vertical column, không FlatList/ScrollView con */}
           {getInProgressCourses().length > 0 ? (
             getInProgressCourses().map((enrollment) => (
-              <View key={enrollment._id} className="bg-white border border-gray-200 rounded-xl p-4 mb-3 shadow-sm">
-                <View className="flex-row items-start">
+              <View key={enrollment._id} style={[styles.latestCourseCard, { marginBottom: 12 }]}> 
+                {typeof enrollment.courseId === 'object' && 'image' in enrollment.courseId && enrollment.courseId.image ? (
                   <Image
-                    source={require('../../assets/images/uiDesign.png')}
-                    className="rounded-lg"
+                    source={{ uri: (enrollment.courseId as any).image }}
                     style={styles.courseImage}
                   />
-                  <View className="flex-1">
-                    <Text className="font-semibold text-gray-900 text-base">
-                      {enrollment.courseId.subjectId?.subjectName || 'Unknown Subject'}
-                    </Text>
-                    <Text className="text-gray-600 text-sm">
-                      {enrollment.courseId.subjectId?.subjectCode}
-                    </Text>
-                    <View className="flex-row items-center mt-2">
-                      <View className="bg-blue-100 px-2 py-1 rounded-full">
-                        <Text className="text-blue-600 text-xs font-medium">
-                          {enrollment.status}
+                ) : (
+                  <View style={[styles.courseImage, { backgroundColor: '#F5F6FA', borderRadius: 8 }]} />
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: 'bold', color: '#222', fontSize: 15 }}>
+                    {enrollment.courseId?.subjectId?.subjectName || 'Unknown Subject'}
+                  </Text>
+                  <Text style={{ color: '#666', fontSize: 13 }}>
+                    {enrollment.courseId?.subjectId?.subjectCode}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                    <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
+                      <Text style={{ color: '#2563EB', fontSize: 12, fontWeight: '500' }}>
+                        {enrollment.status}
+                      </Text>
+                    </View>
+                    {enrollment.grade.length > 0 && (
+                      <View style={{ marginLeft: 8, backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
+                        <Text style={{ color: '#666', fontSize: 12 }}>
+                          Grade: {enrollment.grade[enrollment.grade.length - 1]?.score || 'N/A'}
                         </Text>
                       </View>
-                      {enrollment.grade.length > 0 && (
-                        <View className="ml-2 bg-gray-100 px-2 py-1 rounded-full">
-                          <Text className="text-gray-600 text-xs">
-                            Grade: {enrollment.grade[enrollment.grade.length - 1]?.score || 'N/A'}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
+                    )}
                   </View>
                 </View>
               </View>
@@ -318,5 +321,18 @@ const styles = StyleSheet.create({
     height: 96,
     minHeight: 80,
     maxHeight: 120,
+  },
+  latestCourseCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 10,
+    minWidth: 200,
+    maxWidth: 500,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
 });

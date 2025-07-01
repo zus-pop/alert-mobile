@@ -6,8 +6,9 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import myAxios from '@/utils/my-axios';
 
-const BOT_AVATAR = require('../../assets/images/icon.png');
+const BOT_AVATAR = require('../../assets/images/adaptive-icon.png');
 const USER_AVATAR = require('../../assets/images/avatar.png'); // Có thể thay bằng avatar user nếu có
 
 interface Message {
@@ -46,15 +47,10 @@ const Chat: React.FC = () => {
     setInput('');
     setLoading(true);
     try {
-      const res = await axios.post(
+      const res = await myAxios.post(
         `${API_URL}/api/ai/chat`,
-        { question: input },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-          },
-        }
+        { question: input }
+        
       );
       console.log('AI API response:', res.data);
       let aiText = 'Xin lỗi, tôi không hiểu.';

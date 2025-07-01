@@ -14,6 +14,7 @@ import { setUser as fetchUserFromAPI } from "../../apis/auth.api";
 import { useNotification } from "../../contexts/notification-provider";
 import { useAuthStore } from "../../stores/useAuthStore";
 import myAxios from "../../utils/my-axios";
+import { getStudentEnrollments, Enrollment } from "../../apis/enrollments.api";
 
 const avatar = require("../../assets/images/avatar.png");
 const bell = require("../../assets/images/bell.png");
@@ -38,6 +39,7 @@ const HomeScreen: React.FC = () => {
   const setUser = useAuthStore((state) => state.setUser);
   const { requestPushToken } = useNotification();
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
 
   useEffect(() => {
     requestPushToken();
@@ -67,6 +69,20 @@ const HomeScreen: React.FC = () => {
       fetchAlerts();
     }
   }, [token]);
+
+  // Fetch enrollments
+  useEffect(() => {
+    const fetchEnrollments = async () => {
+      if (!user?._id) return;
+      try {
+        const res = await getStudentEnrollments(user._id);
+        setEnrollments(res.data || []);
+      } catch (err) {
+        setEnrollments([]);
+      }
+    };
+    fetchEnrollments();
+  }, [user?._id]);
 
   // Check if there are any alerts
   const hasAlerts = alerts.length > 0;
@@ -125,30 +141,24 @@ const HomeScreen: React.FC = () => {
         showsHorizontalScrollIndicator={false}
         style={styles.courseList}
       >
-        <View style={styles.courseCard}>
-          <Image source={uxDesign} style={styles.courseImage} />
-          <Text style={styles.courseCardTitle}>UX Design Course</Text>
-          <Text style={styles.courseCardDesc}>2h 40min - 15 lesson</Text>
-          <TouchableOpacity style={styles.keepLearningBtn}>
-            <Text style={styles.keepLearningText}>Keep learning</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.courseCard}>
-          <Image source={webDesign} style={styles.courseImage} />
-          <Text style={styles.courseCardTitle}>Web Design Course</Text>
-          <Text style={styles.courseCardDesc}>4h 30min - 24 lesson</Text>
-          <TouchableOpacity style={styles.keepLearningBtn}>
-            <Text style={styles.keepLearningText}>Keep learning</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.courseCard}>
-          <Image source={wireframe} style={styles.courseImage} />
-          <Text style={styles.courseCardTitle}>Wireframe Course</Text>
-          <Text style={styles.courseCardDesc}>5h 10min - 18 lesson</Text>
-          <TouchableOpacity style={styles.keepLearningBtn}>
-            <Text style={styles.keepLearningText}>Keep learning</Text>
-          </TouchableOpacity>
-        </View>
+        {enrollments.map((enrollment) => (
+          <View key={enrollment._id} style={styles.courseCard}>
+            {enrollment.courseId?.image ? (
+              <Image source={{ uri: enrollment.courseId.image }} style={styles.courseImage} />
+            ) : (
+              <View style={[styles.courseImage, { backgroundColor: "#F5F6FA" }]} />
+            )}
+            <Text style={styles.courseCardTitle}>
+              {enrollment.courseId?.subjectId?.subjectName || "No name"}
+            </Text>
+            <Text style={styles.courseCardDesc}>
+              {enrollment.courseId?.semesterId?.semesterName || ""}
+            </Text>
+            <TouchableOpacity style={styles.keepLearningBtn}>
+              <Text style={styles.keepLearningText}>Keep learning</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
       </ScrollView>
       <TouchableOpacity style={styles.seeAllBtn}>
         <Text style={styles.seeAllText}>See All Courses</Text>
