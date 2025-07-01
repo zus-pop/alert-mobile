@@ -11,6 +11,8 @@ import {
   TouchableOpacity,
   View,
   FlatList,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import { Enrollment, EnrollmentStatusGroup, getStudentEnrollments } from '../../apis/enrollments.api';
 import LogoutModal from '../../components/LogoutModal';
@@ -115,6 +117,7 @@ export default function ProfileScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" hidden={true} />
       {/* Banner */}
       <View className="relative" style={styles.bannerContainer}>
         <Image

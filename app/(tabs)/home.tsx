@@ -9,10 +9,13 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  StatusBar,
+  Platform,
 } from "react-native";
 import { setUser as fetchUserFromAPI } from "../../apis/auth.api";
 import { useNotification } from "../../contexts/notification-provider";
 import { useAuthStore } from "../../stores/useAuthStore";
+import { useSelectedCourseStore } from "../../stores/useSelectedCourseStore";
 import myAxios from "../../utils/my-axios";
 import { getStudentEnrollments, Enrollment } from "../../apis/enrollments.api";
 
@@ -38,8 +41,11 @@ const HomeScreen: React.FC = () => {
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const { requestPushToken } = useNotification();
+  const setSelectedCourseId = useSelectedCourseStore((state) => state.setSelectedCourseId);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [filteredEnrollments, setFilteredEnrollments] = useState<Enrollment[]>([]);
 
   useEffect(() => {
     requestPushToken();
@@ -84,11 +90,31 @@ const HomeScreen: React.FC = () => {
     fetchEnrollments();
   }, [user?._id]);
 
+  // Filter enrollments based on search query
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredEnrollments(enrollments);
+    } else {
+      const filtered = enrollments.filter((enrollment) => {
+        const courseName = enrollment.courseId?.subjectId?.subjectName?.toLowerCase() || "";
+        const courseCode = enrollment.courseId?.subjectId?.subjectCode?.toLowerCase() || "";
+        const semesterName = enrollment.courseId?.semesterId?.semesterName?.toLowerCase() || "";
+        const query = searchQuery.toLowerCase();
+        
+        return courseName.includes(query) || 
+               courseCode.includes(query) || 
+               semesterName.includes(query);
+      });
+      setFilteredEnrollments(filtered);
+    }
+  }, [searchQuery, enrollments]);
+
   // Check if there are any alerts
   const hasAlerts = alerts.length > 0;
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" hidden={true} />
       {/* Header */}
       <SafeAreaView style={styles.headerSafeArea}>
         <View style={styles.header}>
@@ -118,7 +144,12 @@ const HomeScreen: React.FC = () => {
 
       {/* Search */}
       <View style={styles.searchBox}>
-        <TextInput placeholder="Search.." style={styles.searchInput} />
+        <TextInput 
+          placeholder="Search courses..." 
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
       </View>
 
       {/* Featured Course */}
@@ -141,13 +172,21 @@ const HomeScreen: React.FC = () => {
         showsHorizontalScrollIndicator={false}
         style={styles.courseList}
       >
-        {enrollments.map((enrollment) => (
+        {filteredEnrollments.map((enrollment) => (
           <View key={enrollment._id} style={styles.courseCard}>
-            {enrollment.courseId?.image ? (
-              <Image source={{ uri: enrollment.courseId.image }} style={styles.courseImage} />
-            ) : (
-              <View style={[styles.courseImage, { backgroundColor: "#F5F6FA" }]} />
-            )}
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedCourseId(enrollment._id);
+                router.push("/(tabs)/my-course");
+              }}
+              style={styles.courseImageContainer}
+            >
+              {enrollment.courseId?.image ? (
+                <Image source={{ uri: enrollment.courseId.image }} style={styles.courseImage} />
+              ) : (
+                <View style={[styles.courseImage, { backgroundColor: "#F5F6FA" }]} />
+              )}
+            </TouchableOpacity>
             <Text style={styles.courseCardTitle}>
               {enrollment.courseId?.subjectId?.subjectName || "No name"}
             </Text>
@@ -211,12 +250,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 100,
   },
-  headerSafeArea: { backgroundColor: "#fff", paddingTop: 12 },
+  headerSafeArea: { 
+    backgroundColor: "#fff", 
+    paddingTop: Platform.OS === 'ios' ? 0 : 20,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 16,
+    marginTop: Platform.OS === 'ios' ? 16 : 8,
     marginBottom: 8,
+    paddingHorizontal: 16,
   },
   avatar: { width: 56, height: 56, borderRadius: 28, marginRight: 12 },
   welcome: { color: "#B0B0B0", fontSize: 16 },
@@ -299,11 +342,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  courseImageContainer: {
+    marginBottom: 6,
+  },
   courseImage: {
     width: "100%",
     height: 100,
     borderRadius: 10,
-    marginBottom: 6,
   },
   courseCardTitle: { fontWeight: "bold", fontSize: 16, color: "#2B3A67" },
   courseCardDesc: { color: "#B0B0B0", fontSize: 13, marginBottom: 6 },
