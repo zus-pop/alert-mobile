@@ -22,6 +22,7 @@ const MyCourse: React.FC = () => {
       }
 
       const response = await getStudentEnrollments(user._id);
+      console.log(response.data);
 
       // Filter out enrollments with null subjectId
       const validEnrollments = response.data.filter(enrollment =>

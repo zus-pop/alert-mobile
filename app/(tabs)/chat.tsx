@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
-const BOT_AVATAR = require('../../assets/images/icon.png');
+const BOT_AVATAR = require('../../assets/images/adaptive-icon.png');
 const USER_AVATAR = require('../../assets/images/avatar.png'); // Có thể thay bằng avatar user nếu có
 
 interface Message {
