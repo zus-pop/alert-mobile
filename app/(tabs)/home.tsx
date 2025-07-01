@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import React, { useEffect } from "react";
 import {
   Image,
@@ -39,10 +40,13 @@ const HomeScreen: React.FC = () => {
             <Text style={styles.welcome}>Welcome</Text>
             <Text style={styles.username}>Nguyen Quoc Huy</Text>
           </View>
-          <View style={styles.bellWrap}>
+          <TouchableOpacity
+            style={styles.bellWrap}
+            onPress={() => router.push("/notifications")}
+          >
             <Image source={bell} style={styles.bell} />
             <View style={styles.notiDot} />
-          </View>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
 
