@@ -3,7 +3,6 @@ import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   RefreshControl,
   ScrollView,
@@ -13,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { Enrollment, EnrollmentStatusGroup, getStudentEnrollments } from '../../apis/enrollments.api';
+import LogoutModal from '../../components/LogoutModal';
 import { useNotification } from "../../contexts/notification-provider";
 import { useAuthStore } from '../../stores/useAuthStore';
 interface StatItem {
@@ -27,6 +27,8 @@ export default function ProfileScreen() {
   const [enrollmentStats, setEnrollmentStats] = useState<EnrollmentStatusGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const { deletePushToken } = useNotification();
   const fetchEnrollments = async () => {
     if (!user?._id) return;
@@ -53,22 +55,21 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await deletePushToken();
-            logout();
-            router.replace('/auth');
-          },
-        },
-      ]
-    );
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await deletePushToken();
+      logout();
+      router.replace('/auth');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      setLoggingOut(false);
+      setShowLogoutModal(false);
+    }
   };
 
   const getStats = (): StatItem[] => {
@@ -238,6 +239,14 @@ export default function ProfileScreen() {
           )}
         </View>
       </View>
+
+      {/* Logout Modal */}
+      <LogoutModal
+        visible={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={confirmLogout}
+        loading={loggingOut}
+      />
     </ScrollView>
   );
 }
