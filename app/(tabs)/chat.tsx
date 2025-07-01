@@ -28,6 +28,7 @@ const Chat: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -86,6 +87,7 @@ const Chat: React.FC = () => {
 
   const renderItem = ({ item, index }: { item: Message; index: number }) => {
     const isUser = item.sender === 'user';
+    let userAvatarSource = user?.image ? { uri: user.image } : USER_AVATAR;
     return (
       <View style={[styles.row, isUser ? styles.rowEnd : styles.rowStart]}>
         {!isUser && <Image source={BOT_AVATAR} style={styles.avatar} />}
@@ -98,7 +100,7 @@ const Chat: React.FC = () => {
             )}
           </View>
         </View>
-        {isUser && <Image source={USER_AVATAR} style={styles.avatar} />}
+        {isUser && <Image source={userAvatarSource} style={styles.avatar} />}
       </View>
     );
   };
@@ -111,8 +113,7 @@ const Chat: React.FC = () => {
       <View style={styles.header}> 
         <Image source={BOT_AVATAR} style={styles.headerAvatar} />
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Main Title</Text>
-          <Text style={styles.headerStatus}>● Online</Text>
+          <Text style={styles.headerTitle}>Happy Bot</Text>
         </View>
         <TouchableOpacity onPress={() => router.replace('/home')}>
           <MaterialIcons name="remove" size={32} color="#fff" />
@@ -172,11 +173,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 18,
-  },
-  headerStatus: {
-    color: '#b2ff59',
-    fontSize: 13,
-    marginTop: 2,
   },
   messagesList: { padding: 16, paddingBottom: 8 },
   row: {
