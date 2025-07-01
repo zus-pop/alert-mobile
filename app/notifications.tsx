@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import { useAuthStore } from "../stores/useAuthStore";
 import myAxios from "../utils/my-axios";
 
 interface NotificationData {
@@ -48,6 +49,7 @@ interface NotificationData {
     title: string;
     content: string;
     status: string;
+    riskLevel: string;
     isRead: boolean;
     createdAt: string;
     updatedAt: string;
@@ -64,8 +66,16 @@ interface NotificationData {
 const NotificationsScreen: React.FC = () => {
     const [notifications, setNotifications] = useState<NotificationData[]>([]);
     const [loading, setLoading] = useState(true);
+    const { accessToken, refreshToken, user } = useAuthStore();
 
     useEffect(() => {
+        // Console log token information from store
+        console.log('=== AUTH STORE TOKEN INFO ===');
+        console.log('Access Token:', accessToken);
+        console.log('Refresh Token:', refreshToken);
+        console.log('User Info:', user);
+        console.log('=============================');
+
         fetchNotifications();
     }, []);
 
@@ -161,28 +171,24 @@ const NotificationsScreen: React.FC = () => {
                         style={styles.navItem}
                         onPress={() => router.push("/(tabs)/home")}
                     >
-                        <Ionicons name="home-outline" size={24} color="#999" />
                         <Text style={styles.navText}>Home</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.navItem}
                         onPress={() => router.push("/(tabs)/chat")}
                     >
-                        <Ionicons name="chatbubble-outline" size={24} color="#999" />
                         <Text style={styles.navText}>Chat</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.navItem}
                         onPress={() => router.push("/(tabs)/my-course")}
                     >
-                        <Ionicons name="book-outline" size={24} color="#999" />
                         <Text style={styles.navText}>My Course</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.navItem}
                         onPress={() => router.push("/(tabs)/profile")}
                     >
-                        <Ionicons name="person-outline" size={24} color="#999" />
                         <Text style={styles.navText}>My Profile</Text>
                     </TouchableOpacity>
                 </View>
@@ -194,11 +200,10 @@ const NotificationsScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F5F5F5",
+        backgroundColor: "#fff",
     },
     statusBarSafeArea: {
         backgroundColor: "#fff",
-        paddingTop: 12
     },
     header: {
         backgroundColor: "#fff",
@@ -281,10 +286,10 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
     bottomSection: {
-        backgroundColor: "#F5F5F5",
+        backgroundColor: "#fff",
         paddingHorizontal: 16,
-        paddingTop: 16,
-        paddingBottom: 20,
+        paddingTop: 0,
+        paddingBottom: 20, // Tăng padding bottom để tránh bị che
     },
     forgotPasswordButton: {
         alignSelf: "center",
@@ -296,29 +301,21 @@ const styles = StyleSheet.create({
     },
     bottomNav: {
         flexDirection: "row",
-        justifyContent: "space-around",
+        justifyContent: "space-between",
         alignItems: "center",
-        backgroundColor: "#fff",
+        backgroundColor: "#F5F6FA",
         borderRadius: 24,
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        padding: 10,
+        marginTop: 8,
+        marginBottom: 8,
     },
     navItem: {
         alignItems: "center",
         flex: 1,
     },
     navText: {
-        color: "#999",
-        fontSize: 12,
-        marginTop: 4,
+        color: "#B0B0B0",
+        fontSize: 13,
     },
 });
 

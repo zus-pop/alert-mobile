@@ -40,7 +40,11 @@ interface NotificationDetail {
             email: string;
             image: string;
         };
-        grade: any[];
+        grade: {
+            type: string;
+            weight: number;
+            score: number;
+        }[];
         status: string;
         enrollmentDate: string;
         createdAt: string;
@@ -50,6 +54,7 @@ interface NotificationDetail {
     title: string;
     content: string;
     status: string;
+    riskLevel: string;
     isRead: boolean;
     createdAt: string;
     updatedAt: string;
@@ -134,6 +139,71 @@ const NotificationDetailScreen: React.FC = () => {
         }
     };
 
+    const calculateOverallGrade = (grades: { type: string; weight: number; score: number; }[]) => {
+        if (!grades || grades.length === 0) return 0;
+
+        const totalWeightedScore = grades.reduce((sum, grade) => {
+            return sum + (grade.score * grade.weight);
+        }, 0);
+
+        const totalWeight = grades.reduce((sum, grade) => sum + grade.weight, 0);
+
+        return totalWeight > 0 ? totalWeightedScore / totalWeight : 0;
+    };
+
+    const getGradeColor = (score: number) => {
+        if (score >= 8.5) return '#4CAF50'; // Green for excellent
+        if (score >= 7.0) return '#FF9800'; // Orange for good
+        if (score >= 5.5) return '#FFC107'; // Yellow for average
+        return '#f44336'; // Red for poor
+    };
+
+    const getGradeLabel = (score: number) => {
+        if (score >= 8.5) return 'Excellent';
+        if (score >= 7.0) return 'Good';
+        if (score >= 5.5) return 'Average';
+        return 'Poor';
+    };
+
+    const getRiskLevelColor = (riskLevel: string) => {
+        switch (riskLevel?.toLowerCase()) {
+            case 'high':
+                return '#f44336'; // Red
+            case 'medium':
+                return '#FF9800'; // Orange
+            case 'low':
+                return '#4CAF50'; // Green
+            default:
+                return '#757575'; // Gray
+        }
+    };
+
+    const getRiskLevelIcon = (riskLevel: string) => {
+        switch (riskLevel?.toLowerCase()) {
+            case 'high':
+                return 'warning';
+            case 'medium':
+                return 'alert-circle';
+            case 'low':
+                return 'checkmark-circle';
+            default:
+                return 'help-circle';
+        }
+    };
+
+    const getRiskLevelBackground = (riskLevel: string) => {
+        switch (riskLevel?.toLowerCase()) {
+            case 'high':
+                return '#FFEBEE'; // Light red
+            case 'medium':
+                return '#FFF3E0'; // Light orange
+            case 'low':
+                return '#E8F5E8'; // Light green
+            default:
+                return '#F5F5F5'; // Light gray
+        }
+    };
+
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
@@ -196,14 +266,77 @@ const NotificationDetailScreen: React.FC = () => {
                                     {notification.enrollmentId.courseId.subjectId?.subjectCode || "N/A"}
                                 </Text>
                                 <Text style={styles.courseName}>
-                                    {notification.enrollmentId.courseId.subjectId.subjectName}
+                                    {notification.enrollmentId.courseId.subjectId?.subjectName}
                                 </Text>
                                 <Text style={styles.semester}>
-                                    {notification.enrollmentId.courseId.semesterId.semesterName}
+                                    {notification.enrollmentId.courseId.semesterId?.semesterName}
                                 </Text>
                             </View>
                         </View>
                     </View>
+
+                    {/* Risk Status */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Risk Status</Text>
+                        <View style={[styles.riskBadge, { backgroundColor: getRiskLevelBackground(notification.riskLevel) }]}>
+                            <Ionicons
+                                name={getRiskLevelIcon(notification.riskLevel) as any}
+                                size={20}
+                                color={getRiskLevelColor(notification.riskLevel)}
+                            />
+                            <Text style={[styles.riskText, { color: getRiskLevelColor(notification.riskLevel) }]}>
+                                {notification.riskLevel ? `${notification.riskLevel.toUpperCase()} Risk` : 'Unknown Risk'}
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Grade Information */}
+                    {notification.enrollmentId.grade && notification.enrollmentId.grade.length > 0 && (
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Grade Details</Text>
+                            <View style={styles.gradeContainer}>
+                                {/* Overall Grade */}
+                                <View style={styles.overallGradeCard}>
+                                    <Text style={styles.overallGradeLabel}>Overall Grade</Text>
+                                    <View style={styles.overallGradeContent}>
+                                        <Text style={[styles.overallGradeScore, { color: getGradeColor(calculateOverallGrade(notification.enrollmentId.grade)) }]}>
+                                            {calculateOverallGrade(notification.enrollmentId.grade).toFixed(2)}
+                                        </Text>
+                                        <Text style={[styles.overallGradeStatus, { color: getGradeColor(calculateOverallGrade(notification.enrollmentId.grade)) }]}>
+                                            {getGradeLabel(calculateOverallGrade(notification.enrollmentId.grade))}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                {/* Individual Grades */}
+                                <Text style={styles.individualGradesTitle}>Individual Grades</Text>
+                                {notification.enrollmentId.grade.map((grade, index) => (
+                                    <View key={index} style={styles.gradeItem}>
+                                        <View style={styles.gradeItemHeader}>
+                                            <Text style={styles.gradeType}>{grade.type}</Text>
+                                            <Text style={styles.gradeWeight}>Weight: {(grade.weight * 100).toFixed(0)}%</Text>
+                                        </View>
+                                        <View style={styles.gradeScoreContainer}>
+                                            <Text style={[styles.gradeScore, { color: getGradeColor(grade.score) }]}>
+                                                {grade.score.toFixed(2)}
+                                            </Text>
+                                            <View style={[styles.gradeBar, { backgroundColor: '#f0f0f0' }]}>
+                                                <View
+                                                    style={[
+                                                        styles.gradeBarFill,
+                                                        {
+                                                            width: `${(grade.score / 10) * 100}%`,
+                                                            backgroundColor: getGradeColor(grade.score)
+                                                        }
+                                                    ]}
+                                                />
+                                            </View>
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+                    )}
 
                     {/* Alert Title */}
                     <View style={styles.section}>
@@ -233,7 +366,7 @@ const NotificationDetailScreen: React.FC = () => {
                             />
                             <View style={styles.studentInfo}>
                                 <Text style={styles.studentName}>
-                                    {notification.enrollmentId.studentId.firstName} {notification.enrollmentId.studentId.lastName}
+                                    {notification.enrollmentId.studentId.firstName} {notification.enrollmentId.studentId?.lastName}
                                 </Text>
                                 <Text style={styles.studentEmail}>
                                     {notification.enrollmentId.studentId.email}
@@ -357,7 +490,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 2,
         elevation: 2,
-        paddingTop: 16,
     },
     headerContent: {
         flexDirection: "row",
@@ -586,6 +718,108 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: "#fff",
         marginLeft: 8,
+    },
+    // Risk Status Styles
+    riskBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 8,
+        alignSelf: "flex-start",
+    },
+    riskText: {
+        fontSize: 16,
+        fontWeight: "600",
+        marginLeft: 8,
+    },
+    // Grade Styles
+    gradeContainer: {
+        backgroundColor: "#f8f9fa",
+        borderRadius: 12,
+        padding: 16,
+    },
+    overallGradeCard: {
+        backgroundColor: "#fff",
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    overallGradeLabel: {
+        fontSize: 14,
+        color: "#666",
+        marginBottom: 8,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+    },
+    overallGradeContent: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+    overallGradeScore: {
+        fontSize: 32,
+        fontWeight: "700",
+    },
+    overallGradeStatus: {
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    individualGradesTitle: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#333",
+        marginBottom: 12,
+    },
+    gradeItem: {
+        backgroundColor: "#fff",
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 8,
+    },
+    gradeItemHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 8,
+    },
+    gradeType: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#333",
+    },
+    gradeWeight: {
+        fontSize: 12,
+        color: "#666",
+        backgroundColor: "#f0f0f0",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+    },
+    gradeScoreContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    gradeScore: {
+        fontSize: 18,
+        fontWeight: "700",
+        marginRight: 12,
+        minWidth: 50,
+    },
+    gradeBar: {
+        flex: 1,
+        height: 8,
+        borderRadius: 4,
+        overflow: "hidden",
+    },
+    gradeBarFill: {
+        height: "100%",
+        borderRadius: 4,
     },
 });
 

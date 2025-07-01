@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { setUser as fetchUserFromAPI } from "../../apis/auth.api";
 import { useNotification } from "../../contexts/notification-provider";
 import { useAuthStore } from "../../stores/useAuthStore";
 
@@ -24,21 +25,39 @@ const weeklyRead = require("../../assets/images/weeklyRead.png");
 
 const HomeScreen: React.FC = () => {
   const token = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
   const { requestPushToken } = useNotification();
 
   useEffect(() => {
     requestPushToken();
   }, []);
 
+  // Fetch user if we have token but no user data
+  useEffect(() => {
+    if (token && !user) {
+      fetchUserFromAPI()
+        .then(setUser)
+        .catch(console.error);
+    }
+  }, [token, user]);
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <SafeAreaView style={styles.headerSafeArea}>
         <View style={styles.header}>
-          <Image source={avatar} style={styles.avatar} />
+          <Image
+            source={user?.image ? { uri: user.image } : avatar}
+            style={styles.avatar}
+          />
           <View style={{ flex: 1 }}>
             <Text style={styles.welcome}>Welcome</Text>
-            <Text style={styles.username}>Nguyen Quoc Huy</Text>
+            <Text style={styles.username}>
+              {user?.firstName && user?.lastName
+                ? `${user.firstName} ${user.lastName}`
+                : user?.firstName || "User"}
+            </Text>
           </View>
           <TouchableOpacity
             style={styles.bellWrap}
