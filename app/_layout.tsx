@@ -12,7 +12,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Toaster } from "sonner-native";
 import Loading from "../components/loading";
 import { NotificationProvider } from "../contexts/notification-provider";
-
+import "../global.css";
 Notification.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: true,

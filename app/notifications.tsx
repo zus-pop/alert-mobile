@@ -6,7 +6,6 @@ import {
     SafeAreaView,
     ScrollView,
     StatusBar,
-    StyleSheet,
     Text,
     TouchableOpacity,
     View
@@ -113,210 +112,94 @@ const NotificationsScreen: React.FC = () => {
     };
 
     return (
-        <View style={styles.container}>
+        <View className="flex-1 bg-white">
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
             {/* Header */}
-            <SafeAreaView style={styles.statusBarSafeArea}>
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Notifications</Text>
+            <SafeAreaView className="bg-white">
+                <View className="bg-white px-5 py-4 border-b border-gray-200">
+                    <Text className="text-2xl font-semibold text-black">Notifications</Text>
                 </View>
             </SafeAreaView>
 
             {/* Notifications List */}
-            <ScrollView style={styles.notificationsList} showsVerticalScrollIndicator={false}>
+            <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
                 {loading ? (
-                    <View style={styles.loadingContainer}>
+                    <View className="flex-1 justify-center items-center py-15">
                         <ActivityIndicator size="large" color="#007AFF" />
-                        <Text style={styles.loadingText}>Loading notifications...</Text>
+                        <Text className="mt-3 text-base text-gray-600">Loading notifications...</Text>
                     </View>
                 ) : notifications.length === 0 ? (
-                    <View style={styles.emptyContainer}>
+                    <View className="flex-1 justify-center items-center py-15">
                         <Ionicons name="notifications-outline" size={64} color="#ccc" />
-                        <Text style={styles.emptyText}>No notifications found</Text>
+                        <Text className="mt-4 text-base text-gray-600 text-center">No notifications found</Text>
                     </View>
                 ) : (
                     notifications.map((notification) => (
                         <TouchableOpacity
                             key={notification._id}
-                            style={styles.notificationCard}
+                            className="flex-row bg-gray-200 rounded-2xl p-4 mb-3 items-start"
                             onPress={() => handleNotificationPress(notification)}
                         >
-                            <View style={styles.notificationIcon}>
+                            <View className="mr-3 mt-0.5">
                                 <Ionicons name="warning-outline" size={22} color="#999" />
                             </View>
-                            <View style={styles.notificationContent}>
-                                <Text style={styles.courseCode}>
-                                    {notification.enrollmentId.courseId.subjectId?.subjectCode || "N/A"}
-                                </Text>
-                                <Text style={styles.notificationText} numberOfLines={3}>
+                            <View className="flex-1">
+                                <View className="flex-row items-center justify-between mb-1">
+                                    <Text className="text-base font-semibold text-gray-800">
+                                        {notification.enrollmentId.courseId.subjectId?.subjectCode || "N/A"}
+                                    </Text>
+                                    {!notification.isRead && (
+                                        <View className="bg-blue-500 px-2 py-1 rounded-full">
+                                            <Text className="text-white text-xs font-medium">New</Text>
+                                        </View>
+                                    )}
+                                </View>
+                                <Text className="text-sm text-gray-600 leading-5" numberOfLines={3}>
                                     {notification.title}
                                 </Text>
-                                <Text style={styles.timestampText}>
+                                <Text className="text-xs text-gray-400 mt-1">
                                     {formatTimeAgo(notification.createdAt)}
                                 </Text>
                             </View>
-                            {!notification.isRead && <View style={styles.unreadDot} />}
+
                         </TouchableOpacity>
                     ))
                 )}
             </ScrollView>
 
             {/* Bottom Section */}
-            <View style={styles.bottomSection}>
-
+            <View className="bg-white px-4 pt-0 pb-5">
                 {/* Bottom Navigation */}
-                <View style={styles.bottomNav}>
+                <View className="flex-row justify-between items-center bg-gray-100 rounded-3xl p-2.5 mt-2 mb-2">
                     <TouchableOpacity
-                        style={styles.navItem}
+                        className="items-center flex-1"
                         onPress={() => router.push("/(tabs)/home")}
                     >
-                        <Text style={styles.navText}>Home</Text>
+                        <Text className="text-gray-400 text-xs">Home</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={styles.navItem}
+                        className="items-center flex-1"
                         onPress={() => router.push("/(tabs)/chat")}
                     >
-                        <Text style={styles.navText}>Chat</Text>
+                        <Text className="text-gray-400 text-xs">Chat</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={styles.navItem}
+                        className="items-center flex-1"
                         onPress={() => router.push("/(tabs)/my-course")}
                     >
-                        <Text style={styles.navText}>My Course</Text>
+                        <Text className="text-gray-400 text-xs">My Course</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={styles.navItem}
+                        className="items-center flex-1"
                         onPress={() => router.push("/(tabs)/profile")}
                     >
-                        <Text style={styles.navText}>My Profile</Text>
+                        <Text className="text-gray-400 text-xs">My Profile</Text>
                     </TouchableOpacity>
                 </View>
             </View>
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#fff",
-    },
-    statusBarSafeArea: {
-        backgroundColor: "#fff",
-    },
-    header: {
-        backgroundColor: "#fff",
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#E5E5E5",
-    },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: "600",
-        color: "#000",
-    },
-    notificationsList: {
-        flex: 1,
-        paddingHorizontal: 16,
-        paddingTop: 16,
-    },
-    notificationCard: {
-        flexDirection: "row",
-        backgroundColor: "#E8E8E8",
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 12,
-        alignItems: "flex-start",
-    },
-    notificationIcon: {
-        marginRight: 12,
-        marginTop: 2,
-    },
-    notificationContent: {
-        flex: 1,
-    },
-    courseCode: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#333",
-        marginBottom: 4,
-    },
-    notificationText: {
-        fontSize: 14,
-        color: "#666",
-        lineHeight: 20,
-    },
-    timestampText: {
-        fontSize: 12,
-        color: "#999",
-        marginTop: 4,
-    },
-    unreadDot: {
-        width: 8,
-        height: 8,
-        backgroundColor: "#007AFF",
-        borderRadius: 4,
-        position: "absolute",
-        top: 16,
-        right: 16,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        paddingVertical: 60,
-    },
-    loadingText: {
-        marginTop: 12,
-        fontSize: 16,
-        color: "#666",
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        paddingVertical: 60,
-    },
-    emptyText: {
-        marginTop: 16,
-        fontSize: 16,
-        color: "#666",
-        textAlign: "center",
-    },
-    bottomSection: {
-        backgroundColor: "#fff",
-        paddingHorizontal: 16,
-        paddingTop: 0,
-        paddingBottom: 20, // Tăng padding bottom để tránh bị che
-    },
-    forgotPasswordButton: {
-        alignSelf: "center",
-        marginBottom: 16,
-    },
-    forgotPasswordText: {
-        color: "#999",
-        fontSize: 16,
-    },
-    bottomNav: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        backgroundColor: "#F5F6FA",
-        borderRadius: 24,
-        padding: 10,
-        marginTop: 8,
-        marginBottom: 8,
-    },
-    navItem: {
-        alignItems: "center",
-        flex: 1,
-    },
-    navText: {
-        color: "#B0B0B0",
-        fontSize: 13,
-    },
-});
 
 export default NotificationsScreen;

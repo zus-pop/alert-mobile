@@ -8,7 +8,6 @@ import {
     SafeAreaView,
     ScrollView,
     StatusBar,
-    StyleSheet,
     Text,
     TouchableOpacity,
     View,
@@ -86,6 +85,7 @@ const NotificationDetailScreen: React.FC = () => {
             console.log('Calling API with URL:', `alerts/${notificationId}`);
             const response = await myAxios.get(`alerts/${notificationId}`);
             console.log('API Response:', response.data);
+            console.log('Grade data:', response.data?.enrollmentId?.grade);
 
             // Try different response structures
             if (response.data) {
@@ -142,11 +142,14 @@ const NotificationDetailScreen: React.FC = () => {
     const calculateOverallGrade = (grades: { type: string; weight: number; score: number; }[]) => {
         if (!grades || grades.length === 0) return 0;
 
-        const totalWeightedScore = grades.reduce((sum, grade) => {
+        const validGrades = grades.filter(grade => grade.score != null && grade.weight != null);
+        if (validGrades.length === 0) return 0;
+
+        const totalWeightedScore = validGrades.reduce((sum, grade) => {
             return sum + (grade.score * grade.weight);
         }, 0);
 
-        const totalWeight = grades.reduce((sum, grade) => sum + grade.weight, 0);
+        const totalWeight = validGrades.reduce((sum, grade) => sum + grade.weight, 0);
 
         return totalWeight > 0 ? totalWeightedScore / totalWeight : 0;
     };
@@ -206,173 +209,199 @@ const NotificationDetailScreen: React.FC = () => {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
+            <View className="flex-1 justify-center items-center bg-gray-50">
                 <StatusBar barStyle="dark-content" backgroundColor="#fff" />
                 <ActivityIndicator size="large" color="#007AFF" />
-                <Text style={styles.loadingText}>Loading notification...</Text>
+                <Text className="mt-3 text-base text-gray-600">Loading notification...</Text>
             </View>
         );
     }
 
     if (!notification) {
         return (
-            <View style={styles.errorContainer}>
+            <View className="flex-1 justify-center items-center bg-gray-50 px-10">
                 <StatusBar barStyle="dark-content" backgroundColor="#fff" />
                 <Ionicons name="alert-circle-outline" size={64} color="#f44336" />
-                <Text style={styles.errorText}>Notification not found</Text>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                    <Text style={styles.backButtonText}>Go Back</Text>
+                <Text className="mt-4 text-lg text-red-500 text-center mb-6">Notification not found</Text>
+                <TouchableOpacity className="bg-blue-500 px-6 py-3 rounded-lg" onPress={() => router.back()}>
+                    <Text className="text-white text-base font-semibold">Go Back</Text>
                 </TouchableOpacity>
             </View>
         );
     }
 
     return (
-        <View style={styles.container}>
+        <View className="flex-1 bg-gray-50">
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
             {/* Header */}
-            <SafeAreaView style={styles.header}>
-                <View style={styles.headerContent}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backIcon}>
+            <SafeAreaView className="bg-white shadow-sm">
+                <View className="flex-row justify-between items-center px-4 py-3">
+                    <TouchableOpacity onPress={() => router.back()} className="p-2">
                         <Ionicons name="arrow-back" size={24} color="#000" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Notification Details</Text>
-                    <View style={styles.placeholder} />
+                    <Text className="text-lg font-semibold text-black">Notification Details</Text>
+                    <View className="w-10" />
                 </View>
             </SafeAreaView>
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
                 {/* Main Content Card */}
-                <View style={styles.mainCard}>
+                <View className="bg-white rounded-2xl p-5 my-4 shadow-sm">
                     {/* Status Badge */}
-                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(notification.status) }]}>
+                    <View
+                        className="flex-row items-center self-start px-3 py-1.5 rounded-full mb-5"
+                        style={{ backgroundColor: getStatusColor(notification.status) }}
+                    >
                         <Ionicons
                             name={getStatusIcon(notification.status) as any}
                             size={16}
                             color="#fff"
                         />
-                        <Text style={styles.statusText}>{notification.status}</Text>
+                        <Text className="text-white text-xs font-semibold ml-1">{notification.status}</Text>
                     </View>
 
                     {/* Course Info */}
-                    <View style={styles.courseInfoSection}>
-                        <View style={styles.courseHeader}>
-                            <View style={styles.courseIcon}>
+                    <View className="mb-5">
+                        <View className="flex-row items-center">
+                            <View className="w-10 h-10 bg-blue-100 rounded-full justify-center items-center mr-3">
                                 <Ionicons name="book" size={20} color="#007AFF" />
                             </View>
-                            <View style={styles.courseDetails}>
-                                <Text style={styles.courseCode}>
-                                    {notification.enrollmentId.courseId.subjectId?.subjectCode || "N/A"}
+                            <View className="flex-1">
+                                <Text className="text-lg font-bold text-black">
+                                    {notification.enrollmentId?.courseId?.subjectId?.subjectCode || "N/A"}
                                 </Text>
-                                <Text style={styles.courseName}>
-                                    {notification.enrollmentId.courseId.subjectId?.subjectName}
+                                <Text className="text-sm text-gray-600 mt-0.5">
+                                    {notification.enrollmentId?.courseId?.subjectId?.subjectName || "No subject name"}
                                 </Text>
-                                <Text style={styles.semester}>
-                                    {notification.enrollmentId.courseId.semesterId?.semesterName}
+                                <Text className="text-xs text-gray-400 mt-0.5">
+                                    {notification.enrollmentId?.courseId?.semesterId?.semesterName || "No semester info"}
                                 </Text>
                             </View>
                         </View>
                     </View>
 
                     {/* Risk Status */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Risk Status</Text>
-                        <View style={[styles.riskBadge, { backgroundColor: getRiskLevelBackground(notification.riskLevel) }]}>
+                    <View className="mb-5">
+                        <Text className="text-sm font-semibold text-gray-800 mb-2 uppercase tracking-wide">Risk Status</Text>
+                        <View
+                            className="flex-row items-center self-start px-4 py-3 rounded-lg"
+                            style={{ backgroundColor: getRiskLevelBackground(notification.riskLevel) }}
+                        >
                             <Ionicons
                                 name={getRiskLevelIcon(notification.riskLevel) as any}
                                 size={20}
                                 color={getRiskLevelColor(notification.riskLevel)}
                             />
-                            <Text style={[styles.riskText, { color: getRiskLevelColor(notification.riskLevel) }]}>
+                            <Text
+                                className="text-base font-semibold ml-2"
+                                style={{ color: getRiskLevelColor(notification.riskLevel) }}
+                            >
                                 {notification.riskLevel ? `${notification.riskLevel.toUpperCase()} Risk` : 'Unknown Risk'}
                             </Text>
                         </View>
                     </View>
 
                     {/* Grade Information */}
-                    {notification.enrollmentId.grade && notification.enrollmentId.grade.length > 0 && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Grade Details</Text>
-                            <View style={styles.gradeContainer}>
-                                {/* Overall Grade */}
-                                <View style={styles.overallGradeCard}>
-                                    <Text style={styles.overallGradeLabel}>Overall Grade</Text>
-                                    <View style={styles.overallGradeContent}>
-                                        <Text style={[styles.overallGradeScore, { color: getGradeColor(calculateOverallGrade(notification.enrollmentId.grade)) }]}>
-                                            {calculateOverallGrade(notification.enrollmentId.grade).toFixed(2)}
-                                        </Text>
-                                        <Text style={[styles.overallGradeStatus, { color: getGradeColor(calculateOverallGrade(notification.enrollmentId.grade)) }]}>
-                                            {getGradeLabel(calculateOverallGrade(notification.enrollmentId.grade))}
-                                        </Text>
-                                    </View>
-                                </View>
-
-                                {/* Individual Grades */}
-                                <Text style={styles.individualGradesTitle}>Individual Grades</Text>
-                                {notification.enrollmentId.grade.map((grade, index) => (
-                                    <View key={index} style={styles.gradeItem}>
-                                        <View style={styles.gradeItemHeader}>
-                                            <Text style={styles.gradeType}>{grade.type}</Text>
-                                            <Text style={styles.gradeWeight}>Weight: {(grade.weight * 100).toFixed(0)}%</Text>
-                                        </View>
-                                        <View style={styles.gradeScoreContainer}>
-                                            <Text style={[styles.gradeScore, { color: getGradeColor(grade.score) }]}>
-                                                {grade.score.toFixed(2)}
+                    <View className="mb-5">
+                        <Text className="text-sm font-semibold text-gray-800 mb-2 uppercase tracking-wide">Grade Details</Text>
+                        <View className="bg-gray-50 rounded-xl p-4">
+                            {notification.enrollmentId?.grade && Array.isArray(notification.enrollmentId.grade) && notification.enrollmentId.grade.length > 0 ? (
+                                <>
+                                    {/* Overall Grade */}
+                                    <View className="bg-white rounded-lg p-4 mb-4 shadow-sm">
+                                        <Text className="text-sm text-gray-600 mb-2 uppercase tracking-wide">Overall Grade</Text>
+                                        <View className="flex-row items-center justify-between">
+                                            <Text
+                                                className="text-3xl font-bold"
+                                                style={{ color: getGradeColor(calculateOverallGrade(notification.enrollmentId.grade)) }}
+                                            >
+                                                {calculateOverallGrade(notification.enrollmentId.grade)?.toFixed(2) || 'N/A'}
                                             </Text>
-                                            <View style={[styles.gradeBar, { backgroundColor: '#f0f0f0' }]}>
-                                                <View
-                                                    style={[
-                                                        styles.gradeBarFill,
-                                                        {
-                                                            width: `${(grade.score / 10) * 100}%`,
-                                                            backgroundColor: getGradeColor(grade.score)
-                                                        }
-                                                    ]}
-                                                />
+                                            <Text
+                                                className="text-base font-semibold"
+                                                style={{ color: getGradeColor(calculateOverallGrade(notification.enrollmentId.grade)) }}
+                                            >
+                                                {getGradeLabel(calculateOverallGrade(notification.enrollmentId.grade))}
+                                            </Text>
+                                        </View>
+                                    </View>
+
+                                    {/* Individual Grades */}
+                                    <Text className="text-base font-semibold text-gray-800 mb-3">Individual Grades</Text>
+                                    {notification.enrollmentId.grade.map((grade, index) => (
+                                        <View key={index} className="bg-white rounded-lg p-3 mb-2">
+                                            <View className="flex-row justify-between items-center mb-2">
+                                                <Text className="text-base font-semibold text-gray-800">{grade.type || 'Unknown'}</Text>
+                                                <Text className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                                                    Weight: {grade.weight != null ? (grade.weight * 100).toFixed(0) : 'N/A'}%
+                                                </Text>
+                                            </View>
+                                            <View className="flex-row items-center">
+                                                <Text
+                                                    className="text-lg font-bold mr-3 min-w-[50px]"
+                                                    style={{ color: getGradeColor(grade.score ?? 0) }}
+                                                >
+                                                    {grade.score != null ? grade.score.toFixed(2) : 'N/A'}
+                                                </Text>
+                                                <View className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                    <View
+                                                        className="h-full rounded-full"
+                                                        style={{
+                                                            width: `${grade.score != null ? (grade.score / 10) * 100 : 0}%`,
+                                                            backgroundColor: getGradeColor(grade.score ?? 0)
+                                                        }}
+                                                    />
+                                                </View>
                                             </View>
                                         </View>
-                                    </View>
-                                ))}
-                            </View>
+                                    ))}
+                                </>
+                            ) : (
+                                <View className="bg-white rounded-lg p-6 items-center">
+                                    <Ionicons name="school-outline" size={48} color="#ccc" />
+                                    <Text className="text-base text-gray-500 mt-3 text-center">No grade information available</Text>
+                                    <Text className="text-sm text-gray-400 mt-1 text-center">Grades will appear here once available</Text>
+                                </View>
+                            )}
                         </View>
-                    )}
+                    </View>
 
                     {/* Alert Title */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Alert Title</Text>
-                        <Text style={styles.alertTitle}>{notification.title}</Text>
+                    <View className="mb-5">
+                        <Text className="text-sm font-semibold text-gray-800 mb-2 uppercase tracking-wide">Alert Title</Text>
+                        <Text className="text-lg font-semibold text-black leading-6">{notification.title}</Text>
                     </View>
 
                     {/* Alert Content */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Description</Text>
-                        <Text style={styles.alertContent}>{notification.content}</Text>
+                    <View className="mb-5">
+                        <Text className="text-sm font-semibold text-gray-800 mb-2 uppercase tracking-wide">Description</Text>
+                        <Text className="text-base text-gray-700 leading-6">{notification.content}</Text>
                     </View>
 
                     {/* Date Info */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Created</Text>
-                        <Text style={styles.dateText}>{formatDate(notification.createdAt)}</Text>
+                    <View className="mb-5">
+                        <Text className="text-sm font-semibold text-gray-800 mb-2 uppercase tracking-wide">Created</Text>
+                        <Text className="text-base text-gray-600">{formatDate(notification.createdAt)}</Text>
                     </View>
 
                     {/* Student Info */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Student Information</Text>
-                        <View style={styles.studentCard}>
+                    <View className="mb-5">
+                        <Text className="text-sm font-semibold text-gray-800 mb-2 uppercase tracking-wide">Student Information</Text>
+                        <View className="flex-row bg-gray-50 rounded-xl p-4 items-center">
                             <Image
                                 source={{ uri: notification.enrollmentId.studentId.image }}
-                                style={styles.studentAvatar}
+                                className="w-12 h-12 rounded-full mr-3"
                             />
-                            <View style={styles.studentInfo}>
-                                <Text style={styles.studentName}>
+                            <View className="flex-1">
+                                <Text className="text-base font-semibold text-black">
                                     {notification.enrollmentId.studentId.firstName} {notification.enrollmentId.studentId?.lastName}
                                 </Text>
-                                <Text style={styles.studentEmail}>
+                                <Text className="text-sm text-gray-600 mt-0.5">
                                     {notification.enrollmentId.studentId.email}
                                 </Text>
-                                <View style={styles.enrollmentBadge}>
-                                    <Text style={styles.enrollmentStatus}>
+                                <View className="self-start bg-green-100 px-2 py-1 rounded mt-1.5">
+                                    <Text className="text-xs text-green-600 font-semibold">
                                         {notification.enrollmentId.status}
                                     </Text>
                                 </View>
@@ -382,30 +411,30 @@ const NotificationDetailScreen: React.FC = () => {
 
                     {/* Supervisor Response */}
                     {notification.supervisorResponse && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Supervisor Response</Text>
-                            <View style={styles.responseCard}>
-                                <View style={styles.responseHeader}>
+                        <View className="mb-5">
+                            <Text className="text-sm font-semibold text-gray-800 mb-2 uppercase tracking-wide">Supervisor Response</Text>
+                            <View className="bg-green-50 rounded-xl p-4 border-l-4 border-green-500">
+                                <View className="flex-row items-center mb-3">
                                     <Ionicons name="person-circle" size={24} color="#4CAF50" />
-                                    <Text style={styles.responseTitle}>Response</Text>
+                                    <Text className="text-base font-semibold text-green-600 ml-2">Response</Text>
                                 </View>
-                                <Text style={styles.responseText}>
+                                <Text className="text-base text-green-800 leading-6 mb-4">
                                     {notification.supervisorResponse.response}
                                 </Text>
 
                                 {notification.supervisorResponse.plan && (
                                     <>
-                                        <View style={styles.planHeader}>
+                                        <View className="flex-row items-center mb-2">
                                             <Ionicons name="clipboard" size={20} color="#FF9800" />
-                                            <Text style={styles.planTitle}>Action Plan</Text>
+                                            <Text className="text-sm font-semibold text-orange-600 ml-2">Action Plan</Text>
                                         </View>
-                                        <Text style={styles.planText}>
+                                        <Text className="text-base text-orange-800 leading-6 mb-3 italic">
                                             {notification.supervisorResponse.plan}
                                         </Text>
                                     </>
                                 )}
 
-                                <Text style={styles.responseDate}>
+                                <Text className="text-xs text-gray-600 text-right">
                                     Responded on {formatDate(notification.supervisorResponse.createdAt)}
                                 </Text>
                             </View>
@@ -415,412 +444,31 @@ const NotificationDetailScreen: React.FC = () => {
             </ScrollView>
 
             {/* Action Buttons */}
-            <View style={styles.actionButtons}>
+            <View className="flex-row px-4 py-4 bg-white shadow-sm">
                 <TouchableOpacity
-                    style={[styles.actionButton, styles.markReadButton]}
+                    className="flex-1 flex-row justify-center items-center py-3 bg-green-500 rounded-lg mx-2"
                     onPress={() => {
                         // Mark as read functionality
                         Alert.alert('Info', 'Mark as read functionality to be implemented');
                     }}
                 >
                     <Ionicons name="checkmark" size={20} color="#fff" />
-                    <Text style={styles.buttonText}>Mark as Read</Text>
+                    <Text className="text-white text-base font-semibold ml-2">Mark as Read</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    style={[styles.actionButton, styles.shareButton]}
+                    className="flex-1 flex-row justify-center items-center py-3 bg-white border border-blue-500 rounded-lg mx-2"
                     onPress={() => {
                         // Share functionality
                         Alert.alert('Info', 'Share functionality to be implemented');
                     }}
                 >
                     <Ionicons name="share" size={20} color="#007AFF" />
-                    <Text style={[styles.buttonText, { color: '#007AFF' }]}>Share</Text>
+                    <Text className="text-blue-500 text-base font-semibold ml-2">Share</Text>
                 </TouchableOpacity>
             </View>
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#F8F9FA",
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#F8F9FA",
-    },
-    loadingText: {
-        marginTop: 12,
-        fontSize: 16,
-        color: "#666",
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#F8F9FA",
-        paddingHorizontal: 40,
-    },
-    errorText: {
-        marginTop: 16,
-        fontSize: 18,
-        color: "#f44336",
-        textAlign: "center",
-        marginBottom: 24,
-    },
-    backButton: {
-        backgroundColor: "#007AFF",
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 8,
-    },
-    backButtonText: {
-        color: "#fff",
-        fontSize: 16,
-        fontWeight: "600",
-    },
-    header: {
-        backgroundColor: "#fff",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    headerContent: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    backIcon: {
-        padding: 8,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: "600",
-        color: "#000",
-    },
-    placeholder: {
-        width: 40,
-    },
-    content: {
-        flex: 1,
-        paddingHorizontal: 16,
-    },
-    mainCard: {
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding: 20,
-        marginVertical: 16,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 3,
-    },
-    statusBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        alignSelf: "flex-start",
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        marginBottom: 20,
-    },
-    statusText: {
-        color: "#fff",
-        fontSize: 12,
-        fontWeight: "600",
-        marginLeft: 4,
-    },
-    courseInfoSection: {
-        marginBottom: 20,
-    },
-    courseHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    courseIcon: {
-        width: 40,
-        height: 40,
-        backgroundColor: "#E3F2FD",
-        borderRadius: 20,
-        justifyContent: "center",
-        alignItems: "center",
-        marginRight: 12,
-    },
-    courseDetails: {
-        flex: 1,
-    },
-    courseCode: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#000",
-    },
-    courseName: {
-        fontSize: 14,
-        color: "#666",
-        marginTop: 2,
-    },
-    semester: {
-        fontSize: 12,
-        color: "#999",
-        marginTop: 2,
-    },
-    section: {
-        marginBottom: 20,
-    },
-    sectionTitle: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#333",
-        marginBottom: 8,
-        textTransform: "uppercase",
-        letterSpacing: 0.5,
-    },
-    alertTitle: {
-        fontSize: 18,
-        fontWeight: "600",
-        color: "#000",
-        lineHeight: 24,
-    },
-    alertContent: {
-        fontSize: 16,
-        color: "#444",
-        lineHeight: 24,
-    },
-    dateText: {
-        fontSize: 16,
-        color: "#666",
-    },
-    studentCard: {
-        flexDirection: "row",
-        backgroundColor: "#F8F9FA",
-        borderRadius: 12,
-        padding: 16,
-        alignItems: "center",
-    },
-    studentAvatar: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        marginRight: 12,
-    },
-    studentInfo: {
-        flex: 1,
-    },
-    studentName: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#000",
-    },
-    studentEmail: {
-        fontSize: 14,
-        color: "#666",
-        marginTop: 2,
-    },
-    enrollmentBadge: {
-        alignSelf: "flex-start",
-        backgroundColor: "#E8F5E8",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
-        marginTop: 6,
-    },
-    enrollmentStatus: {
-        fontSize: 12,
-        color: "#4CAF50",
-        fontWeight: "600",
-    },
-    responseCard: {
-        backgroundColor: "#F0F8F0",
-        borderRadius: 12,
-        padding: 16,
-        borderLeftWidth: 4,
-        borderLeftColor: "#4CAF50",
-    },
-    responseHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 12,
-    },
-    responseTitle: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#4CAF50",
-        marginLeft: 8,
-    },
-    responseText: {
-        fontSize: 16,
-        color: "#2E7D2E",
-        lineHeight: 24,
-        marginBottom: 16,
-    },
-    planHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 8,
-    },
-    planTitle: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#FF9800",
-        marginLeft: 8,
-    },
-    planText: {
-        fontSize: 16,
-        color: "#E65100",
-        lineHeight: 24,
-        marginBottom: 12,
-        fontStyle: "italic",
-    },
-    responseDate: {
-        fontSize: 12,
-        color: "#666",
-        textAlign: "right",
-    },
-    actionButtons: {
-        flexDirection: "row",
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        backgroundColor: "#fff",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 4,
-    },
-    actionButton: {
-        flex: 1,
-        flexDirection: "row",
-        justifyContent: "center",
-        alignItems: "center",
-        paddingVertical: 12,
-        borderRadius: 8,
-        marginHorizontal: 8,
-    },
-    markReadButton: {
-        backgroundColor: "#4CAF50",
-    },
-    shareButton: {
-        backgroundColor: "#fff",
-        borderWidth: 1,
-        borderColor: "#007AFF",
-    },
-    buttonText: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#fff",
-        marginLeft: 8,
-    },
-    // Risk Status Styles
-    riskBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 8,
-        alignSelf: "flex-start",
-    },
-    riskText: {
-        fontSize: 16,
-        fontWeight: "600",
-        marginLeft: 8,
-    },
-    // Grade Styles
-    gradeContainer: {
-        backgroundColor: "#f8f9fa",
-        borderRadius: 12,
-        padding: 16,
-    },
-    overallGradeCard: {
-        backgroundColor: "#fff",
-        borderRadius: 8,
-        padding: 16,
-        marginBottom: 16,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 1,
-    },
-    overallGradeLabel: {
-        fontSize: 14,
-        color: "#666",
-        marginBottom: 8,
-        textTransform: "uppercase",
-        letterSpacing: 0.5,
-    },
-    overallGradeContent: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-    },
-    overallGradeScore: {
-        fontSize: 32,
-        fontWeight: "700",
-    },
-    overallGradeStatus: {
-        fontSize: 16,
-        fontWeight: "600",
-    },
-    individualGradesTitle: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#333",
-        marginBottom: 12,
-    },
-    gradeItem: {
-        backgroundColor: "#fff",
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 8,
-    },
-    gradeItemHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 8,
-    },
-    gradeType: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#333",
-    },
-    gradeWeight: {
-        fontSize: 12,
-        color: "#666",
-        backgroundColor: "#f0f0f0",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
-    },
-    gradeScoreContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    gradeScore: {
-        fontSize: 18,
-        fontWeight: "700",
-        marginRight: 12,
-        minWidth: 50,
-    },
-    gradeBar: {
-        flex: 1,
-        height: 8,
-        borderRadius: 4,
-        overflow: "hidden",
-    },
-    gradeBarFill: {
-        height: "100%",
-        borderRadius: 4,
-    },
-});
 
 export default NotificationDetailScreen;
