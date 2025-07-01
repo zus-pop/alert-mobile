@@ -34,10 +34,16 @@ export interface Enrollment {
     status: string;
 }
 
+export interface EnrollmentStatusGroup {
+    status: string;
+    count: number;
+}
+
 export interface EnrollmentResponse {
     data: Enrollment[];
     totalItems: number;
     totalPage: number;
+    groupByEnrollmentStatus: EnrollmentStatusGroup[];
 }
 
 export const getStudentEnrollments = async (
