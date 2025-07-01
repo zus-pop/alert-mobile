@@ -1,62 +1,75 @@
 import { router } from "expo-router";
 import { useEffect } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { setUser as fetchUserFromAPI } from "../apis/auth.api";
 import { useGoogleLogin } from "../hooks/useGoogleLogin";
 import { useAuthStore } from "../stores/useAuthStore";
 
 export default function Index() {
   const token = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
+
   useEffect(() => {
     if (token) {
+      // If we have token but no user data, fetch it
+      if (!user) {
+        fetchUserFromAPI()
+          .then(setUser)
+          .catch(console.error);
+      }
       router.replace("/(tabs)/home");
     }
-  }, []);
+  }, [token, user]);
+
   const { login } = useGoogleLogin();
 
   return (
-    <View style={styles.container}>
-      {/* Main Illustration Banner */}
-      <Image
-        source={require("@/assets/images/banner.png")}
-        style={styles.banner}
-        resizeMode="contain"
-      />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        {/* Main Illustration Banner */}
+        <Image
+          source={require("@/assets/images/banner.png")}
+          style={styles.banner}
+          resizeMode="contain"
+        />
 
-      {/* Title */}
-      <Text style={styles.title}>EWS</Text>
+        {/* Title */}
+        <Text style={styles.title}>EWS</Text>
 
-      {/* Subtitle */}
-      <Text style={styles.subtitle}>
-        Pick Your Next Challenge Pick Your Next Pick Your Next Challenge
-      </Text>
+        {/* Subtitle */}
+        <Text style={styles.subtitle}>
+          Pick Your Next Challenge Pick Your Next Pick Your Next Challenge
+        </Text>
 
-      {/* Sign In Button */}
-      <TouchableOpacity
-        style={styles.signInButton}
-        onPress={() => router.push("/login")}
-      >
-        <Text style={styles.signInButtonText}>Sign In</Text>
-      </TouchableOpacity>
+        {/* Sign In Button */}
+        <TouchableOpacity
+          style={styles.signInButton}
+          onPress={() => router.push("/login")}
+        >
+          <Text style={styles.signInButtonText}>Sign In</Text>
+        </TouchableOpacity>
 
-      {/* Sign Up Button Placeholder */}
-      <View style={styles.signUpButton}>
-        <Text style={styles.signUpButtonText}>Sign Up</Text>
-      </View>
-
-      {/* Or Divider */}
-      <Text style={styles.orText}>or</Text>
-
-      {/* Social Login with Google */}
-      <TouchableOpacity onPress={login}>
-        <View style={styles.socialLoginPlaceholder}>
-          <Image
-            source={require("@/assets/images/google.png")}
-            style={styles.googleIcon}
-            resizeMode="contain"
-          />
+        {/* Sign Up Button Placeholder */}
+        <View style={styles.signUpButton}>
+          <Text style={styles.signUpButtonText}>Sign Up</Text>
         </View>
-      </TouchableOpacity>
-    </View>
+
+        {/* Or Divider */}
+        <Text style={styles.orText}>or</Text>
+
+        {/* Social Login with Google */}
+        <TouchableOpacity onPress={login}>
+          <View style={styles.socialLoginPlaceholder}>
+            <Image
+              source={require("@/assets/images/google.png")}
+              style={styles.googleIcon}
+              resizeMode="contain"
+            />
+          </View>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -64,9 +77,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#00b4d8",
+  },
+  content: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "flex-start",
     paddingTop: 60,
+    paddingBottom: 20,
   },
   banner: {
     marginTop: 40,
