@@ -10,6 +10,7 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import { IconSymbol } from "../components/ui/IconSymbol";
 import { useAuthStore } from "../stores/useAuthStore";
 import myAxios from "../utils/my-axios";
 
@@ -81,7 +82,11 @@ const NotificationsScreen: React.FC = () => {
     const fetchNotifications = async () => {
         try {
             setLoading(true);
-            const response = await myAxios.get('alerts');
+            const response = await myAxios.get('alerts', {
+                params: {
+                    studentId: user?._id
+                }
+            });
             setNotifications(response.data.data || []);
         } catch (error) {
             console.error('Error fetching notifications:', error);
@@ -123,7 +128,11 @@ const NotificationsScreen: React.FC = () => {
             </SafeAreaView>
 
             {/* Notifications List */}
-            <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
+            <ScrollView
+                className="flex-1 px-4 pt-4"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 80 }}
+            >
                 {loading ? (
                     <View className="flex-1 justify-center items-center py-15">
                         <ActivityIndicator size="large" color="#007AFF" />
@@ -147,7 +156,7 @@ const NotificationsScreen: React.FC = () => {
                             <View className="flex-1">
                                 <View className="flex-row items-center justify-between mb-1">
                                     <Text className="text-base font-semibold text-gray-800">
-                                        {notification.enrollmentId.courseId.subjectId?.subjectCode || "N/A"}
+                                        {notification.enrollmentId?.courseId?.subjectId?.subjectCode || "N/A"}
                                     </Text>
                                     {!notification.isRead && (
                                         <View className="bg-blue-500 px-2 py-1 rounded-full">
@@ -168,35 +177,52 @@ const NotificationsScreen: React.FC = () => {
                 )}
             </ScrollView>
 
-            {/* Bottom Section */}
-            <View className="bg-white px-4 pt-0 pb-5">
-                {/* Bottom Navigation */}
-                <View className="flex-row justify-between items-center bg-gray-100 rounded-3xl p-2.5 mt-2 mb-2">
-                    <TouchableOpacity
-                        className="items-center flex-1"
-                        onPress={() => router.push("/(tabs)/home")}
-                    >
-                        <Text className="text-gray-400 text-xs">Home</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        className="items-center flex-1"
-                        onPress={() => router.push("/(tabs)/chat")}
-                    >
-                        <Text className="text-gray-400 text-xs">Chat</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        className="items-center flex-1"
-                        onPress={() => router.push("/(tabs)/my-course")}
-                    >
-                        <Text className="text-gray-400 text-xs">My Course</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        className="items-center flex-1"
-                        onPress={() => router.push("/(tabs)/profile")}
-                    >
-                        <Text className="text-gray-400 text-xs">My Profile</Text>
-                    </TouchableOpacity>
-                </View>
+            {/* Bottom Navigation */}
+            <View style={{
+                backgroundColor: "#F5F6FA",
+                borderRadius: 24,
+                margin: 16,
+                padding: 2,
+                position: "absolute",
+                left: 0,
+                right: 0,
+                bottom: 0,
+                elevation: 4,
+                shadowColor: "#000",
+                shadowOpacity: 0.05,
+                shadowRadius: 4,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+            }}>
+                <TouchableOpacity
+                    style={{ alignItems: "center", flex: 1, paddingVertical: 4 }}
+                    onPress={() => router.push("/(tabs)/home")}
+                >
+                    <IconSymbol size={28} name="house.fill" color="#0a7ea4" />
+                    <Text style={{ color: "#0a7ea4", fontSize: 10, fontWeight: "600", marginTop: 1 }}>Home</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={{ alignItems: "center", flex: 1, paddingVertical: 4 }}
+                    onPress={() => router.push("/(tabs)/chat")}
+                >
+                    <IconSymbol size={28} name="chat.fill" color="#687076" />
+                    <Text style={{ color: "#687076", fontSize: 10, marginTop: 1 }}>Chat</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={{ alignItems: "center", flex: 1, paddingVertical: 4 }}
+                    onPress={() => router.push("/(tabs)/my-course")}
+                >
+                    <IconSymbol size={28} name="book.fill" color="#687076" />
+                    <Text style={{ color: "#687076", fontSize: 10, marginTop: 1 }}>My Course</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={{ alignItems: "center", flex: 1, paddingVertical: 4 }}
+                    onPress={() => router.push("/(tabs)/profile")}
+                >
+                    <IconSymbol size={28} name="person.fill" color="#687076" />
+                    <Text style={{ color: "#687076", fontSize: 10, marginTop: 1 }}>My Profile</Text>
+                </TouchableOpacity>
             </View>
         </View>
     );

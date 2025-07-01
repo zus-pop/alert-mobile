@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   SafeAreaView,
@@ -13,6 +13,7 @@ import {
 import { setUser as fetchUserFromAPI } from "../../apis/auth.api";
 import { useNotification } from "../../contexts/notification-provider";
 import { useAuthStore } from "../../stores/useAuthStore";
+import myAxios from "../../utils/my-axios";
 
 const avatar = require("../../assets/images/avatar.png");
 const bell = require("../../assets/images/bell.png");
@@ -23,11 +24,20 @@ const wireframe = require("../../assets/images/wireframe.png");
 const excel = require("../../assets/images/excel.png");
 const weeklyRead = require("../../assets/images/weeklyRead.png");
 
+interface Alert {
+  _id: string;
+  title: string;
+  content: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 const HomeScreen: React.FC = () => {
   const token = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const { requestPushToken } = useNotification();
+  const [alerts, setAlerts] = useState<Alert[]>([]);
 
   useEffect(() => {
     requestPushToken();
@@ -41,6 +51,25 @@ const HomeScreen: React.FC = () => {
         .catch(console.error);
     }
   }, [token, user]);
+
+  // Fetch alerts
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const response = await myAxios.get('alerts');
+        setAlerts(response.data.data || []);
+      } catch (error) {
+        console.error('Error fetching alerts:', error);
+      }
+    };
+
+    if (token) {
+      fetchAlerts();
+    }
+  }, [token]);
+
+  // Check if there are any alerts
+  const hasAlerts = alerts.length > 0;
 
   return (
     <View style={styles.container}>
@@ -64,7 +93,9 @@ const HomeScreen: React.FC = () => {
             onPress={() => router.push("/notifications")}
           >
             <Image source={bell} style={styles.bell} />
-            <View style={styles.notiDot} />
+            {hasAlerts && (
+              <View style={[styles.notiDot, styles.notiDotRed]} />
+            )}
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -157,22 +188,6 @@ const HomeScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navTextActive}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navText}>Chat</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navText}>My Course</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navText}>My Profile</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };
@@ -200,9 +215,11 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#F55A5A",
     borderWidth: 2,
     borderColor: "#fff",
+  },
+  notiDotRed: {
+    backgroundColor: "#F55A5A",
   },
   searchBox: { marginVertical: 12 },
   searchInput: {
@@ -307,17 +324,4 @@ const styles = StyleSheet.create({
   readTextContainer: { flex: 1, paddingRight: 8, overflow: "hidden" },
   readAuthor: { color: "#B0B0B0", fontSize: 12 },
   readTitle: { color: "#2B3A67", fontWeight: "bold", fontSize: 14 },
-  bottomNav: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#F5F6FA",
-    borderRadius: 24,
-    padding: 10,
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  navItem: { alignItems: "center", flex: 1 },
-  navText: { color: "#B0B0B0", fontSize: 13 },
-  navTextActive: { color: "#2B3A67", fontWeight: "bold", fontSize: 13 },
 });
