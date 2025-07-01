@@ -11,6 +11,7 @@ import {
     Text,
     TouchableOpacity,
     View,
+    Platform,
 } from "react-native";
 import myAxios from "../utils/my-axios";
 
@@ -232,10 +233,10 @@ const NotificationDetailScreen: React.FC = () => {
 
     return (
         <View className="flex-1 bg-gray-50">
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <StatusBar barStyle="dark-content" backgroundColor="#fff" hidden={true} />
 
             {/* Header */}
-            <SafeAreaView className="bg-white shadow-sm">
+            <SafeAreaView style={{ backgroundColor: '#fff', paddingTop: Platform.OS === 'ios' ? 0 : 20 }}>
                 <View className="flex-row justify-between items-center px-4 py-3">
                     <TouchableOpacity onPress={() => router.back()} className="p-2">
                         <Ionicons name="arrow-back" size={24} color="#000" />

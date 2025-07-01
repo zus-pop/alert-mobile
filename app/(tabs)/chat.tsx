@@ -1,11 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { SafeAreaView, StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, ActivityIndicator, StatusBar } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import myAxios from '@/utils/my-axios';
 
 const BOT_AVATAR = require('../../assets/images/adaptive-icon.png');
@@ -102,19 +101,20 @@ const Chat: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
-      <View style={{ height: insets.top, backgroundColor: '#2B3A67' }} />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#2B3A67" hidden={true} />
       {/* Header */}
-      <View style={styles.header}> 
-        <Image source={BOT_AVATAR} style={styles.headerAvatar} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Happy Bot</Text>
+      <SafeAreaView style={styles.headerSafeArea}>
+        <View style={styles.header}> 
+          <Image source={BOT_AVATAR} style={styles.headerAvatar} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>Happy Bot</Text>
+          </View>
+          <TouchableOpacity onPress={() => router.replace('/home')}>
+            <MaterialIcons name="remove" size={32} color="#fff" />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={() => router.replace('/home')}>
-          <MaterialIcons name="remove" size={32} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      </SafeAreaView>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <FlatList
           ref={flatListRef}
@@ -140,7 +140,7 @@ const Chat: React.FC = () => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -148,11 +148,15 @@ export default Chat;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f7f8fa' },
+  headerSafeArea: {
+    backgroundColor: '#2B3A67',
+    paddingTop: Platform.OS === 'ios' ? 0 : 20,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingVertical: 16,
     backgroundColor: '#2B3A67',
     borderBottomLeftRadius: 18,
     borderBottomRightRadius: 18,

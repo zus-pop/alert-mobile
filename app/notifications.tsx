@@ -8,7 +8,8 @@ import {
     StatusBar,
     Text,
     TouchableOpacity,
-    View
+    View,
+    Platform
 } from "react-native";
 import { IconSymbol } from "../components/ui/IconSymbol";
 import { useAuthStore } from "../stores/useAuthStore";
@@ -118,10 +119,10 @@ const NotificationsScreen: React.FC = () => {
 
     return (
         <View className="flex-1 bg-white">
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <StatusBar barStyle="dark-content" backgroundColor="#fff" hidden={true} />
 
             {/* Header */}
-            <SafeAreaView className="bg-white">
+            <SafeAreaView style={{ backgroundColor: '#fff', paddingTop: Platform.OS === 'ios' ? 0 : 20 }}>
                 <View className="bg-white px-5 py-4 border-b border-gray-200">
                     <Text className="text-2xl font-semibold text-black">Notifications</Text>
                 </View>

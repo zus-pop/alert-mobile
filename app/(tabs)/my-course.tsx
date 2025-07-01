@@ -1,14 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { ActivityIndicator, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, StatusBar, Platform } from 'react-native';
 import { Enrollment, getStudentEnrollments } from '../../apis/enrollments.api';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useSelectedCourseStore } from '../../stores/useSelectedCourseStore';
 
 const MyCourse: React.FC = () => {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuthStore();
+  const { selectedCourseId, clearSelectedCourse } = useSelectedCourseStore();
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const fetchEnrollments = async () => {
     try {
@@ -38,6 +41,29 @@ const MyCourse: React.FC = () => {
   useEffect(() => {
     fetchEnrollments();
   }, []);
+
+  // Clear selected course when component unmounts
+  useEffect(() => {
+    return () => {
+      clearSelectedCourse();
+    };
+  }, [clearSelectedCourse]);
+
+  // Scroll to selected course when component mounts
+  useEffect(() => {
+    if (selectedCourseId && enrollments.length > 0) {
+      const selectedIndex = enrollments.findIndex(enrollment => enrollment._id === selectedCourseId);
+      if (selectedIndex !== -1) {
+        // Add a small delay to ensure the component is fully rendered
+        setTimeout(() => {
+          scrollViewRef.current?.scrollTo({
+            y: selectedIndex * 200, // Approximate height of each course card
+            animated: true,
+          });
+        }, 500);
+      }
+    }
+  }, [selectedCourseId, enrollments]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -90,12 +116,10 @@ const MyCourse: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" hidden={true} />
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Courses</Text>
-        <TouchableOpacity style={styles.searchButton}>
-          <Ionicons name="search" size={24} color="#2B3A67" />
-        </TouchableOpacity>
       </View>
 
       {/* Loading State */}
@@ -114,11 +138,12 @@ const MyCourse: React.FC = () => {
         </View>
       ) : (
         /* Course List */
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+                  <ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
           {enrollments.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Image
@@ -137,8 +162,17 @@ const MyCourse: React.FC = () => {
           ) : (
             enrollments.map((enrollment, index) => {
               const overallScore = calculateOverallScore(enrollment.grade);
+              const isSelected = enrollment._id === selectedCourseId;
               return (
-                <View key={enrollment._id} style={styles.courseCard}>
+                <TouchableOpacity
+                  key={enrollment._id} 
+                  style={[
+                    styles.courseCard,
+                    isSelected && styles.selectedCourseCard
+                  ]}
+                  activeOpacity={0.9}
+                  onPress={clearSelectedCourse}
+                >
                   <View style={styles.courseContent}>
                     <View style={styles.courseInfo}>
                       <Text style={styles.courseTitle}>
@@ -189,17 +223,24 @@ const MyCourse: React.FC = () => {
                     </View>
                   </View>
 
-                  <TouchableOpacity style={styles.overviewButton}>
+                  <TouchableOpacity 
+                    style={styles.overviewButton}
+                    onPress={() => {
+                      // Clear selected course when user interacts with the course
+                      clearSelectedCourse();
+                    }}
+                  >
                     <Text style={styles.overviewText}>View Courses</Text>
                   </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
               );
             })
           )}
+
         </ScrollView>
-      )}
-    </SafeAreaView>
-  );
+              )}
+      </SafeAreaView>
+    );
 };
 
 export default MyCourse;
@@ -211,10 +252,11 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: Platform.OS === 'ios' ? 16 : 24,
+    paddingBottom: 16,
     backgroundColor: '#fff',
   },
   headerTitle: {
@@ -222,9 +264,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2B3A67',
   },
-  searchButton: {
-    padding: 4,
-  },
+
+
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -296,6 +337,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+
   scrollView: {
     flex: 1,
     paddingHorizontal: 20,
@@ -304,6 +346,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 80, // Add space for bottom tabs
   },
+
   courseCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -316,6 +359,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  selectedCourseCard: {
+    borderWidth: 2,
+    borderColor: '#2B3A67',
+    backgroundColor: '#F8F9FF',
   },
   courseContent: {
     flexDirection: 'row',
