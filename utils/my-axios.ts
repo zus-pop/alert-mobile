@@ -37,6 +37,7 @@ const processQueue = (error: any, token: string | null = null) => {
 myAxios.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const { refreshToken, setAccessToken, logout } = useAuthStore.getState();
     const originalRequest = error.config;
 
     if (
@@ -61,8 +62,6 @@ myAxios.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const { refreshToken, setAccessToken } = useAuthStore.getState();
-
         const res = await myAxios.get(`auth/refresh`, {
           headers: {
             "x-refresh-token": refreshToken,
@@ -77,6 +76,7 @@ myAxios.interceptors.response.use(
         originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
         return myAxios(originalRequest);
       } catch (err) {
+        logout();
         processQueue(err, null);
         // TODO: logout logic here (e.g. redirect to login page)
         router.replace("/");
