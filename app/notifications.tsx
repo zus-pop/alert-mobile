@@ -3,13 +3,13 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
+    Platform,
     SafeAreaView,
     ScrollView,
     StatusBar,
     Text,
     TouchableOpacity,
-    View,
-    Platform
+    View
 } from "react-native";
 import { IconSymbol } from "../components/ui/IconSymbol";
 import { useAuthStore } from "../stores/useAuthStore";
@@ -183,7 +183,7 @@ const NotificationsScreen: React.FC = () => {
                 backgroundColor: "#F5F6FA",
                 borderRadius: 24,
                 margin: 16,
-                padding: 2,
+                padding: 6,
                 position: "absolute",
                 left: 0,
                 right: 0,
@@ -195,34 +195,35 @@ const NotificationsScreen: React.FC = () => {
                 flexDirection: "row",
                 justifyContent: "space-between",
                 alignItems: "center",
+                height: 80,
             }}>
                 <TouchableOpacity
-                    style={{ alignItems: "center", flex: 1, paddingVertical: 4 }}
+                    style={{ alignItems: "center", flex: 1, paddingVertical: 8, justifyContent: 'space-evenly' }}
                     onPress={() => router.push("/(tabs)/home")}
                 >
-                    <IconSymbol size={28} name="house.fill" color="#0a7ea4" />
-                    <Text style={{ color: "#0a7ea4", fontSize: 10, fontWeight: "600", marginTop: 1 }}>Home</Text>
+                    <IconSymbol size={24} name="house.fill" color="#0a7ea4" />
+                    <Text style={{ color: "#0a7ea4", fontSize: 12, fontWeight: "600", marginTop: 2 }}>Home</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={{ alignItems: "center", flex: 1, paddingVertical: 4 }}
+                    style={{ alignItems: "center", flex: 1, paddingVertical: 8, justifyContent: 'space-evenly' }}
                     onPress={() => router.push("/(tabs)/chat")}
                 >
-                    <IconSymbol size={28} name="chat.fill" color="#687076" />
-                    <Text style={{ color: "#687076", fontSize: 10, marginTop: 1 }}>Chat</Text>
+                    <IconSymbol size={24} name="chat.fill" color="#687076" />
+                    <Text style={{ color: "#687076", fontSize: 12, marginTop: 2 }}>Chat</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={{ alignItems: "center", flex: 1, paddingVertical: 4 }}
+                    style={{ alignItems: "center", flex: 1, paddingVertical: 8, justifyContent: 'space-evenly' }}
                     onPress={() => router.push("/(tabs)/my-course")}
                 >
-                    <IconSymbol size={28} name="book.fill" color="#687076" />
-                    <Text style={{ color: "#687076", fontSize: 10, marginTop: 1 }}>My Course</Text>
+                    <IconSymbol size={24} name="book.fill" color="#687076" />
+                    <Text style={{ color: "#687076", fontSize: 12, marginTop: 2 }}>My Course</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={{ alignItems: "center", flex: 1, paddingVertical: 4 }}
+                    style={{ alignItems: "center", flex: 1, paddingVertical: 8, justifyContent: 'space-evenly' }}
                     onPress={() => router.push("/(tabs)/profile")}
                 >
-                    <IconSymbol size={28} name="person.fill" color="#687076" />
-                    <Text style={{ color: "#687076", fontSize: 10, marginTop: 1 }}>My Profile</Text>
+                    <IconSymbol size={24} name="person.fill" color="#687076" />
+                    <Text style={{ color: "#687076", fontSize: 12, marginTop: 2 }}>My Profile</Text>
                 </TouchableOpacity>
             </View>
         </View>

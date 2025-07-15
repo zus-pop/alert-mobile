@@ -21,6 +21,7 @@ export interface Semester {
 
 export interface Course {
     _id: string;
+    image: string;
     subjectId: Subject | null;
     semesterId: Semester;
 }
