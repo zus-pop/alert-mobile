@@ -5,13 +5,13 @@ import {
     ActivityIndicator,
     Alert,
     Image,
+    Platform,
     SafeAreaView,
     ScrollView,
     StatusBar,
     Text,
     TouchableOpacity,
     View,
-    Platform,
 } from "react-native";
 import myAxios from "../utils/my-axios";
 
