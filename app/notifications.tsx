@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Platform,
+    RefreshControl,
     SafeAreaView,
     ScrollView,
     StatusBar,
@@ -18,6 +20,7 @@ import { useAuthStore } from "../stores/useAuthStore";
 const NotificationsScreen: React.FC = () => {
     const [notifications, setNotifications] = useState<NotificationData[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const { accessToken, refreshToken, user } = useAuthStore();
 
     useEffect(() => {
@@ -30,6 +33,13 @@ const NotificationsScreen: React.FC = () => {
 
         fetchNotifications();
     }, []);
+
+    // Gọi lại API khi trang được focus (khi quay lại từ trang khác)
+    useFocusEffect(
+        useCallback(() => {
+            fetchNotifications();
+        }, [user?._id])
+    );
 
     const fetchNotifications = async () => {
         try {
@@ -46,6 +56,24 @@ const NotificationsScreen: React.FC = () => {
             setLoading(false);
         }
     };
+
+    const handleRefresh = async () => {
+        try {
+            setRefreshing(true);
+            const response = await getNotifications(user?._id || '');
+            // Sort notifications by createdAt in descending order (newest first)
+            const sortedNotifications = (response.data || []).sort((a, b) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+            setNotifications(sortedNotifications);
+        } catch (error) {
+            console.error('Error refreshing notifications:', error);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
+
 
     const formatTimeAgo = (dateString: string) => {
         const now = new Date();
@@ -84,6 +112,14 @@ const NotificationsScreen: React.FC = () => {
                 className="flex-1 px-4 pt-4"
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 120 }}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        tintColor="#007AFF"
+                        colors={["#007AFF"]}
+                    />
+                }
             >
                 {loading ? (
                     <View className="flex-1 justify-center items-center py-15">

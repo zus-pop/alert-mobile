@@ -11,13 +11,16 @@ export default function Index() {
   const setUser = useAuthStore((state) => state.setUser);
 
   useEffect(() => {
-    if (token) {
-      // If we have token but no user data, fetch it
-      if (!user) {
-        fetchUserFromAPI()
-          .then(setUser)
-          .catch(console.error);
-      }
+    // Only fetch user if we have token but no user data
+    if (token && !user) {
+      fetchUserFromAPI()
+        .then(setUser)
+        .catch(console.error);
+    }
+  }, [token, user]);
+
+  useEffect(() => {
+    if (token && user) {
       router.replace("/(tabs)/home");
     }
   }, [token, user]);

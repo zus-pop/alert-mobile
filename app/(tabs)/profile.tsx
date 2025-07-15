@@ -64,7 +64,7 @@ export default function ProfileScreen() {
     try {
       await deletePushToken();
       logout();
-      router.replace('/auth');
+      router.replace('/');
     } catch (error) {
       console.error('Error during logout:', error);
     } finally {

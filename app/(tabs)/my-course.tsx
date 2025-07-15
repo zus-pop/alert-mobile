@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, RefreshControl, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Enrollment, getStudentEnrollments } from '../../apis/enrollments.api';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useSelectedCourseStore } from '../../stores/useSelectedCourseStore';
@@ -47,6 +47,26 @@ const MyCourse: React.FC = () => {
       clearSelectedCourse();
     };
   }, [clearSelectedCourse]);
+
+  const handleRefresh = async () => {
+    try {
+      if (!user?._id) {
+        setError('User not found. Please login again.');
+        return;
+      }
+
+      const response = await getStudentEnrollments(user._id);
+      // Filter out enrollments with null subjectId
+      const validEnrollments = response.data.filter(enrollment =>
+        enrollment.courseId.subjectId !== null
+      );
+      setEnrollments(validEnrollments);
+      setError(null);
+    } catch (error) {
+      console.error('Error refreshing enrollments:', error);
+      setError('Failed to load courses. Please try again.');
+    }
+  };
 
   // Scroll to selected course when component mounts
   useEffect(() => {
@@ -147,6 +167,13 @@ const MyCourse: React.FC = () => {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={false}
+              onRefresh={handleRefresh}
+              tintColor="#2B3A67"
+            />
+          }
         >
           {enrollments.length === 0 ? (
             <View style={styles.emptyContainer}>
