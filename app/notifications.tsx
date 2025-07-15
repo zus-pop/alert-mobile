@@ -35,7 +35,11 @@ const NotificationsScreen: React.FC = () => {
         try {
             setLoading(true);
             const response = await getNotifications(user?._id || '');
-            setNotifications(response.data || []);
+            // Sort notifications by createdAt in descending order (newest first)
+            const sortedNotifications = (response.data || []).sort((a, b) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+            setNotifications(sortedNotifications);
         } catch (error) {
             console.error('Error fetching notifications:', error);
         } finally {

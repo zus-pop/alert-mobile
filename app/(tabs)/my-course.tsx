@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Enrollment, getStudentEnrollments } from '../../apis/enrollments.api';
@@ -75,39 +74,44 @@ const MyCourse: React.FC = () => {
   };
 
 
-  const calculateOverallScore = (grades: Enrollment['grade']) => {
-    if (!grades || grades.length === 0) return 0;
-
-    const totalScore = grades.reduce((sum, grade) => {
-      return sum + (grade.score * grade.weight);
-    }, 0);
-
-    return Math.round(totalScore * 100) / 100; // Round to 2 decimal places
+  const getDisplayGrade = (enrollment: Enrollment) => {
+    if (enrollment.finalGrade !== undefined && enrollment.finalGrade !== null) {
+      return enrollment.finalGrade;
+    }
+    return null;
   };
 
-  const getScoreColor = (score: number) => {
+  const getScoreColor = (score: number | null) => {
+    if (score === null) return '#999'; // Gray for "Not yet"
     if (score >= 8) return '#4CAF50'; // Green for excellent
     if (score >= 6.5) return '#FF9800'; // Orange for good
     if (score >= 5) return '#2196F3'; // Blue for average
     return '#FF6B35'; // Red for poor
   };
 
-  const renderScoreCircle = (score: number, color: string) => {
+  const renderScoreCircle = (score: number | null, color: string) => {
     return (
       <View style={styles.progressContainer}>
         <View style={styles.progressCircle}>
           <View style={[styles.progressBackground, { borderColor: '#E0E0E0' }]} />
-          <View
-            style={[
-              styles.progressForeground,
-              {
-                borderColor: color,
-                transform: [{ rotate: `${(score / 10) * 360}deg` }]
-              }
-            ]}
-          />
+          {score !== null && (
+            <View
+              style={[
+                styles.progressForeground,
+                {
+                  borderColor: color,
+                  transform: [{ rotate: `${(score / 10) * 360}deg` }]
+                }
+              ]}
+            />
+          )}
           <View style={styles.progressInner}>
-            <Text style={styles.progressText}>{score.toFixed(1)}</Text>
+            <Text style={[
+              styles.progressText,
+              score === null && styles.progressTextNotYet
+            ]}>
+              {score !== null ? score.toFixed(1) : 'Not yet'}
+            </Text>
           </View>
         </View>
       </View>
@@ -161,7 +165,7 @@ const MyCourse: React.FC = () => {
             </View>
           ) : (
             enrollments.map((enrollment, index) => {
-              const overallScore = calculateOverallScore(enrollment.grade);
+              const displayGrade = getDisplayGrade(enrollment);
               const isSelected = enrollment._id === selectedCourseId;
               return (
                 <TouchableOpacity
@@ -188,6 +192,7 @@ const MyCourse: React.FC = () => {
                         End date: {formatDate(enrollment.courseId.semesterId.endDate)}
                       </Text>
 
+
                       <View style={styles.statusContainer}>
                         <Text style={styles.statusLabel}>Status: </Text>
                         <View style={[
@@ -207,18 +212,13 @@ const MyCourse: React.FC = () => {
                         </View>
                       </View>
 
-                      <View style={styles.sessionInfo}>
-                        <Ionicons name="calendar-outline" size={16} color="#666" />
-                        <Text style={styles.sessionText}>
-                          Enrolled: {formatDate(enrollment.enrollmentDate)}
-                        </Text>
-                      </View>
+
                     </View>
 
                     <View style={styles.progressSection}>
                       {renderScoreCircle(
-                        overallScore,
-                        getScoreColor(overallScore)
+                        displayGrade,
+                        getScoreColor(displayGrade)
                       )}
                     </View>
                   </View>
@@ -443,6 +443,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: '#2B3A67',
+    textAlign: 'center',
+  },
+  progressTextNotYet: {
+    fontSize: 8,
   },
   overviewButton: {
     backgroundColor: '#F0F0F0',

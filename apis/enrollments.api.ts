@@ -33,6 +33,7 @@ export interface Enrollment {
     enrollmentDate: string;
     grade: Grade[];
     status: string;
+    finalGrade?: number;
 }
 
 export interface EnrollmentStatusGroup {
