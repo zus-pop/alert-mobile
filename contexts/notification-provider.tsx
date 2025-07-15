@@ -1,4 +1,7 @@
+import { removePushToken, updatePushToken } from "@/apis/auth.api";
+import { registerForPushNotificationsAsync } from "@/utils/register-for-push-notification-async";
 import * as Notifications from "expo-notifications";
+import { router } from "expo-router";
 import React, {
   createContext,
   ReactNode,
@@ -7,8 +10,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { removePushToken, updatePushToken } from "../apis/auth.api";
-import { registerForPushNotificationsAsync } from "../utils/register-for-push-notification-async";
 
 interface NotificationContextType {
   expoPushToken: string | null;
@@ -70,6 +71,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   };
 
   useEffect(() => {
+    let isMounted = true;
     notificationListener.current =
       Notifications.addNotificationReceivedListener((notification) => {
         console.log(
@@ -82,13 +84,44 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
         console.log(
-          "🔔 Notification Response when user interact with notification: ",
-          console.log(response)
+          "🔔 Notification Response when user interact with notification: "
         );
         // Handle the notification response here
+        const data = response.notification.request.content.data;
+
+        if (data.type && data.type === "alert") {
+          router.push({
+            pathname: "/notification-detail",
+            params: {
+              notificationId: data.id as string,
+            },
+          });
+        }
       });
 
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (!isMounted || !response?.notification) {
+        console.log("No last notification response or component unmounted.");
+        return;
+      }
+      console.log(
+        "🔔 Last Notification Response when app was closed: ",
+        response.notification
+      );
+      const data = response.notification.request.content.data;
+
+      if (data.type && data.type === "alert") {
+        router.push({
+          pathname: "/notification-detail",
+          params: {
+            notificationId: data.id as string,
+          },
+        });
+      }
+    });
+
     return () => {
+      isMounted = false;
       if (notificationListener.current) {
         notificationListener.current.remove();
       }

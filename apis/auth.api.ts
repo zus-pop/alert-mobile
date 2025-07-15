@@ -23,3 +23,13 @@ export async function removePushToken(token: string) {
     console.log(error);
   }
 }
+
+export async function setUser() {
+  try {
+    const res = await myAxios.get("/auth/me");
+    return res.data;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}

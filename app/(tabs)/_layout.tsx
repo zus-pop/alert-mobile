@@ -1,10 +1,10 @@
-import { Tabs } from "expo-router";
-import React from "react";
 import { HapticTab } from "@/components/HapticTab";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { Tabs } from "expo-router";
+import React from "react";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -31,8 +31,19 @@ export default function TabLayout() {
             shadowOpacity: 0.05,
             shadowRadius: 4,
             borderTopWidth: 0,
+            height: 80,
           },
         ],
+        tabBarItemStyle: {
+          justifyContent: 'space-evenly',
+          alignItems: 'center',
+          paddingVertical: 8,
+          flex: 1,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          marginTop: 2,
+        },
       }}
     >
       <Tabs.Screen
@@ -40,18 +51,18 @@ export default function TabLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="house.fill" color={color} />
+            <IconSymbol size={24} name="house.fill" color={color} />
           ),
         }}
       />
-
       <Tabs.Screen
         name="chat"
         options={{
           title: "Chat",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="chat.fill" color={color} />
+            <IconSymbol size={24} name="chat.fill" color={color} />
           ),
+          tabBarStyle: { display: 'none' },
         }}
       />
       <Tabs.Screen
@@ -59,7 +70,7 @@ export default function TabLayout() {
         options={{
           title: "My Course",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="book.fill" color={color} />
+            <IconSymbol size={24} name="book.fill" color={color} />
           ),
         }}
       />
@@ -68,7 +79,7 @@ export default function TabLayout() {
         options={{
           title: "My Profile",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.fill" color={color} />
+            <IconSymbol size={24} name="person.fill" color={color} />
           ),
         }}
       />
