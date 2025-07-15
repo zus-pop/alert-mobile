@@ -2,22 +2,23 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Image,
+  Platform,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  StatusBar,
-  Platform,
+  Dimensions,
 } from "react-native";
 import { setUser as fetchUserFromAPI } from "../../apis/auth.api";
+import { Enrollment, getStudentEnrollments } from "../../apis/enrollments.api";
 import { useNotification } from "../../contexts/notification-provider";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useSelectedCourseStore } from "../../stores/useSelectedCourseStore";
 import myAxios from "../../utils/my-axios";
-import { getStudentEnrollments, Enrollment } from "../../apis/enrollments.api";
 
 const avatar = require("../../assets/images/avatar.png");
 const bell = require("../../assets/images/bell.png");
@@ -27,6 +28,14 @@ const webDesign = require("../../assets/images/webDesign.png");
 const wireframe = require("../../assets/images/wireframe.png");
 const excel = require("../../assets/images/excel.png");
 const weeklyRead = require("../../assets/images/weeklyRead.png");
+
+// Lấy kích thước màn hình
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// Tính toán kích thước responsive
+const cardWidth = Math.max(screenWidth * 0.42, 160); // Tối thiểu 160, tối đa 42% màn hình
+const cardHeight = cardWidth * 1.4; // Tỷ lệ 1.4:1
+const imageHeight = cardWidth * 0.65; // Chiều cao ảnh = 65% chiều rộng card
 
 interface Alert {
   _id: string;
@@ -124,7 +133,7 @@ const HomeScreen: React.FC = () => {
           />
           <View style={{ flex: 1 }}>
             <Text style={styles.welcome}>Welcome</Text>
-            <Text style={styles.username}>
+            <Text style={styles.username} numberOfLines={1} ellipsizeMode="tail">
               {user?.firstName && user?.lastName
                 ? `${user.firstName} ${user.lastName}`
                 : user?.firstName || "User"}
@@ -142,100 +151,116 @@ const HomeScreen: React.FC = () => {
         </View>
       </SafeAreaView>
 
-      {/* Search */}
-      <View style={styles.searchBox}>
-        <TextInput 
-          placeholder="Search courses..." 
-          style={styles.searchInput}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      {/* Featured Course */}
-      <View style={styles.featuredCourse}>
-        <Image source={uiDesign} style={styles.featuredImage} />
-        <View style={styles.featuredInfo}>
-          <Text style={styles.featuredTitle}>UI Design Course</Text>
-          <Text style={styles.featuredDesc}>2h 40min - 15 lesson</Text>
-          <View style={styles.progressBarBg}>
-            <View style={styles.progressBarFill} />
-            <Text style={styles.progressText}>70</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* My Course */}
-      <Text style={styles.sectionTitle}>My Course</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.courseList}
+      {/* Main Content */}
+      <ScrollView 
+        style={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContainer}
       >
-        {filteredEnrollments.map((enrollment) => (
-          <View key={enrollment._id} style={styles.courseCard}>
-            <TouchableOpacity
-              onPress={() => {
-                setSelectedCourseId(enrollment._id);
-                router.push("/(tabs)/my-course");
-              }}
-              style={styles.courseImageContainer}
-            >
-              {enrollment.courseId?.image ? (
-                <Image source={{ uri: enrollment.courseId.image }} style={styles.courseImage} />
-              ) : (
-                <View style={[styles.courseImage, { backgroundColor: "#F5F6FA" }]} />
-              )}
-            </TouchableOpacity>
-            <Text style={styles.courseCardTitle}>
-              {enrollment.courseId?.subjectId?.subjectName || "No name"}
-            </Text>
-            <Text style={styles.courseCardDesc}>
-              {enrollment.courseId?.semesterId?.semesterName || ""}
-            </Text>
-            <TouchableOpacity style={styles.keepLearningBtn}>
-              <Text style={styles.keepLearningText}>Keep learning</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-      </ScrollView>
-      <TouchableOpacity style={styles.seeAllBtn}>
-        <Text style={styles.seeAllText}>See All Courses</Text>
-      </TouchableOpacity>
+        {/* Search */}
+        <View style={styles.searchBox}>
+          <TextInput 
+            placeholder="Search courses..." 
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
 
-      {/* Weekly Reads */}
-      <Text style={styles.sectionTitle}>Weekly Reads</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.readsList}
-      >
-        <View style={styles.readCard}>
-          <Image source={excel} style={styles.readImage} />
-          <View style={styles.readTextContainer}>
-            <Text style={styles.readAuthor}>Rian Mendella</Text>
-            <Text
-              style={styles.readTitle}
-              numberOfLines={2}
-              ellipsizeMode="tail"
-            >
-              How to improve Microsoft Excel Skills
-            </Text>
+        {/* Featured Course */}
+        <View style={styles.featuredCourse}>
+          <Image source={uiDesign} style={styles.featuredImage} />
+          <View style={styles.featuredInfo}>
+            <Text style={styles.featuredTitle}>UI Design Course</Text>
+            <Text style={styles.featuredDesc}>2h 40min - 15 lesson</Text>
+            <View style={styles.progressBarBg}>
+              <View style={styles.progressBarFill} />
+              <Text style={styles.progressText}>70</Text>
+            </View>
           </View>
         </View>
-        <View style={styles.readCard}>
-          <Image source={weeklyRead} style={styles.readImage} />
-          <View style={styles.readTextContainer}>
-            <Text style={styles.readAuthor}>John Doe</Text>
-            <Text
-              style={styles.readTitle}
-              numberOfLines={2}
-              ellipsizeMode="tail"
-            >
-              Learning Tips for Designers
-            </Text>
+
+        {/* My Course */}
+        <Text style={styles.sectionTitle}>My Course</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.courseList}
+          contentContainerStyle={styles.courseListContent}
+        >
+          {filteredEnrollments.map((enrollment) => (
+            <View key={enrollment._id} style={styles.courseCard}>
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedCourseId(enrollment._id);
+                  router.push("/(tabs)/my-course");
+                }}
+                style={styles.courseImageContainer}
+              >
+                {enrollment.courseId?.image ? (
+                  <Image 
+                    source={{ uri: enrollment.courseId.image }} 
+                    style={styles.courseImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[styles.courseImage, { backgroundColor: "#F5F6FA" }]} />
+                )}
+              </TouchableOpacity>
+              <View style={styles.courseTextContainer}>
+                <Text style={styles.courseCardTitle} numberOfLines={2} ellipsizeMode="tail">
+                  {enrollment.courseId?.subjectId?.subjectName || "No name"}
+                </Text>
+                <Text style={styles.courseCardDesc} numberOfLines={1} ellipsizeMode="tail">
+                  {enrollment.courseId?.semesterId?.semesterName || ""}
+                </Text>
+                <TouchableOpacity style={styles.keepLearningBtn}>
+                  <Text style={styles.keepLearningText}>Keep learning</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+        
+        <TouchableOpacity style={styles.seeAllBtn}>
+          <Text style={styles.seeAllText}>See All Courses</Text>
+        </TouchableOpacity>
+
+        {/* Weekly Reads */}
+        <Text style={styles.sectionTitle}>Weekly Reads</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.readsList}
+          contentContainerStyle={styles.readsListContent}
+        >
+          <View style={styles.readCard}>
+            <Image source={excel} style={styles.readImage} resizeMode="cover" />
+            <View style={styles.readTextContainer}>
+              <Text style={styles.readAuthor}>Rian Mendella</Text>
+              <Text
+                style={styles.readTitle}
+                numberOfLines={3}
+                ellipsizeMode="tail"
+              >
+                How to improve Microsoft Excel Skills
+              </Text>
+            </View>
           </View>
-        </View>
+          <View style={styles.readCard}>
+            <Image source={weeklyRead} style={styles.readImage} resizeMode="cover" />
+            <View style={styles.readTextContainer}>
+              <Text style={styles.readAuthor}>John Doe</Text>
+              <Text
+                style={styles.readTitle}
+                numberOfLines={3}
+                ellipsizeMode="tail"
+              >
+                Learning Tips for Designers
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
       </ScrollView>
     </View>
   );
@@ -246,9 +271,7 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: "#fff", 
-    paddingHorizontal: 16,
-    paddingBottom: 100,
+    backgroundColor: "#fff",
   },
   headerSafeArea: { 
     backgroundColor: "#fff", 
@@ -259,13 +282,44 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: Platform.OS === 'ios' ? 16 : 8,
     marginBottom: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: Math.max(16, screenWidth * 0.04), // Responsive padding
   },
-  avatar: { width: 56, height: 56, borderRadius: 28, marginRight: 12 },
-  welcome: { color: "#B0B0B0", fontSize: 16 },
-  username: { color: "#2B3A67", fontWeight: "bold", fontSize: 20 },
-  bellWrap: { position: "relative", marginLeft: 8 },
-  bell: { width: 32, height: 32 },
+  scrollContent: {
+    flex: 1,
+  },
+  scrollContainer: {
+    paddingHorizontal: Math.max(16, screenWidth * 0.04),
+    paddingBottom: 120, // Đủ space cho tab bar
+  },
+  avatar: { 
+    width: Math.min(56, screenWidth * 0.14), 
+    height: Math.min(56, screenWidth * 0.14), 
+    borderRadius: Math.min(28, screenWidth * 0.07), 
+    marginRight: 12 
+  },
+  welcome: { 
+    color: "#B0B0B0", 
+    fontSize: Math.max(14, screenWidth * 0.04)
+  },
+  username: { 
+    color: "#2B3A67", 
+    fontWeight: "bold", 
+    fontSize: Math.max(18, screenWidth * 0.05),
+    flex: 1,
+  },
+  bellWrap: { 
+    position: "relative", 
+    marginLeft: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    padding: 8,
+    backgroundColor: "#FAFAFA",
+  },
+  bell: { 
+    width: Math.min(24, screenWidth * 0.06), 
+    height: Math.min(24, screenWidth * 0.06) 
+  },
   notiDot: {
     position: "absolute",
     top: 2,
@@ -279,13 +333,15 @@ const styles = StyleSheet.create({
   notiDotRed: {
     backgroundColor: "#F55A5A",
   },
-  searchBox: { marginVertical: 12 },
+  searchBox: { 
+    marginVertical: 12 
+  },
   searchInput: {
     backgroundColor: "#F5F6FA",
     borderRadius: 24,
     paddingHorizontal: 20,
-    height: 40,
-    fontSize: 16,
+    height: Math.max(40, screenHeight * 0.05),
+    fontSize: Math.max(14, screenWidth * 0.04),
   },
   featuredCourse: {
     flexDirection: "row",
@@ -294,11 +350,28 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: "center",
     marginBottom: 8,
+    minHeight: Math.max(100, screenHeight * 0.12),
   },
-  featuredImage: { width: 80, height: 60, borderRadius: 10, marginRight: 16 },
-  featuredInfo: { flex: 1 },
-  featuredTitle: { color: "#fff", fontWeight: "bold", fontSize: 18 },
-  featuredDesc: { color: "#E0F7FA", fontSize: 14, marginBottom: 8 },
+  featuredImage: { 
+    width: Math.max(80, screenWidth * 0.2), 
+    height: Math.max(60, screenWidth * 0.15), 
+    borderRadius: 10, 
+    marginRight: 16 
+  },
+  featuredInfo: { 
+    flex: 1,
+    justifyContent: "center",
+  },
+  featuredTitle: { 
+    color: "#fff", 
+    fontWeight: "bold", 
+    fontSize: Math.max(16, screenWidth * 0.045) 
+  },
+  featuredDesc: { 
+    color: "#E0F7FA", 
+    fontSize: Math.max(12, screenWidth * 0.035), 
+    marginBottom: 8 
+  },
   progressBarBg: {
     backgroundColor: "#B2EBF2",
     borderRadius: 8,
@@ -319,69 +392,125 @@ const styles = StyleSheet.create({
   progressText: {
     color: "#2B3A67",
     fontWeight: "bold",
-    fontSize: 12,
+    fontSize: Math.max(10, screenWidth * 0.03),
     marginLeft: "auto",
     marginRight: 8,
   },
   sectionTitle: {
     fontWeight: "bold",
-    fontSize: 20,
+    fontSize: Math.max(18, screenWidth * 0.05),
     color: "#2B3A67",
-    marginTop: 8,
-    marginBottom: 6,
+    marginTop: 16,
+    marginBottom: 12,
   },
-  courseList: { flexDirection: "row", marginBottom: 4 },
+  courseList: { 
+    marginBottom: 8,
+  },
+  courseListContent: {
+    paddingRight: 16,
+  },
   courseCard: {
     backgroundColor: "#fff",
     borderRadius: 16,
-    padding: 6,
+    padding: 8,
     marginRight: 12,
-    width: 180,
+    width: cardWidth,
+    height: cardHeight,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    justifyContent: 'space-between',
   },
   courseImageContainer: {
-    marginBottom: 6,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   courseImage: {
     width: "100%",
-    height: 100,
-    borderRadius: 10,
+    height: imageHeight,
+    borderRadius: 12,
   },
-  courseCardTitle: { fontWeight: "bold", fontSize: 16, color: "#2B3A67" },
-  courseCardDesc: { color: "#B0B0B0", fontSize: 13, marginBottom: 6 },
+  courseTextContainer: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingTop: 8,
+  },
+  courseCardTitle: { 
+    fontWeight: "bold", 
+    fontSize: Math.max(14, screenWidth * 0.038), 
+    color: "#2B3A67",
+    lineHeight: Math.max(18, screenWidth * 0.048),
+  },
+  courseCardDesc: { 
+    color: "#B0B0B0", 
+    fontSize: Math.max(11, screenWidth * 0.03), 
+    marginVertical: 4,
+  },
   keepLearningBtn: {
     backgroundColor: "#2B3A67",
     borderRadius: 8,
-    paddingVertical: 4,
+    paddingVertical: Math.max(8, screenHeight * 0.01),
     alignItems: "center",
+    marginTop: 4,
   },
-  keepLearningText: { color: "#fff", fontWeight: "bold", fontSize: 14 },
+  keepLearningText: { 
+    color: "#fff", 
+    fontWeight: "bold", 
+    fontSize: Math.max(12, screenWidth * 0.035) 
+  },
   seeAllBtn: {
     alignSelf: "center",
-    marginVertical: 4,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    borderRadius: 16,
+    marginVertical: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: "#2B3A67",
   },
-  seeAllText: { color: "#2B3A67", fontWeight: "bold", fontSize: 14 },
-  readsList: { flexDirection: "row", marginBottom: 4 },
+  seeAllText: { 
+    color: "#2B3A67", 
+    fontWeight: "bold", 
+    fontSize: Math.max(13, screenWidth * 0.036) 
+  },
+  readsList: { 
+    marginBottom: 16,
+  },
+  readsListContent: {
+    paddingRight: 16,
+  },
   readCard: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     backgroundColor: "#F5F6FA",
     borderRadius: 12,
-    padding: 10,
+    padding: 12,
     marginRight: 12,
-    width: 220,
-    height: 140,
+    width: Math.max(240, screenWidth * 0.65),
+    minHeight: Math.max(120, screenHeight * 0.15),
   },
-  readImage: { width: 100, height: 120, borderRadius: 10, marginRight: 10 },
-  readTextContainer: { flex: 1, paddingRight: 8, overflow: "hidden" },
-  readAuthor: { color: "#B0B0B0", fontSize: 12 },
-  readTitle: { color: "#2B3A67", fontWeight: "bold", fontSize: 14 },
+  readImage: { 
+    width: Math.max(80, screenWidth * 0.2), 
+    height: Math.max(100, screenWidth * 0.25), 
+    borderRadius: 10, 
+    marginRight: 12,
+    flex: 0,
+  },
+  readTextContainer: { 
+    flex: 1, 
+    justifyContent: 'flex-start',
+    paddingTop: 4,
+  },
+  readAuthor: { 
+    color: "#B0B0B0", 
+    fontSize: Math.max(11, screenWidth * 0.03),
+    marginBottom: 4,
+  },
+  readTitle: { 
+    color: "#2B3A67", 
+    fontWeight: "bold", 
+    fontSize: Math.max(13, screenWidth * 0.035),
+    lineHeight: Math.max(16, screenWidth * 0.042),
+  },
 });
