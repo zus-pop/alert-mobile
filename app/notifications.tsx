@@ -96,6 +96,8 @@ const NotificationsScreen: React.FC = () => {
         }
     };
 
+
+
     const formatTimeAgo = (dateString: string) => {
         const now = new Date();
         const notificationDate = new Date(dateString);

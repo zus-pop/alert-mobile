@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import PullToRefresh from '../../components/PullToRefresh';
 import { Enrollment, getStudentEnrollments } from '../../apis/enrollments.api';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useSelectedCourseStore } from '../../stores/useSelectedCourseStore';
@@ -11,7 +12,6 @@ const MyCourse: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuthStore();
   const { selectedCourseId, clearSelectedCourse } = useSelectedCourseStore();
-  const scrollViewRef = useRef<ScrollView>(null);
 
   const fetchEnrollments = async () => {
     try {
@@ -49,21 +49,25 @@ const MyCourse: React.FC = () => {
     };
   }, [clearSelectedCourse]);
 
-  // Scroll to selected course when component mounts
-  useEffect(() => {
-    if (selectedCourseId && enrollments.length > 0) {
-      const selectedIndex = enrollments.findIndex(enrollment => enrollment._id === selectedCourseId);
-      if (selectedIndex !== -1) {
-        // Add a small delay to ensure the component is fully rendered
-        setTimeout(() => {
-          scrollViewRef.current?.scrollTo({
-            y: selectedIndex * 200, // Approximate height of each course card
-            animated: true,
-          });
-        }, 500);
+  const handleRefresh = async () => {
+    try {
+      if (!user?._id) {
+        setError('User not found. Please login again.');
+        return;
       }
+
+      const response = await getStudentEnrollments(user._id);
+      // Filter out enrollments with null subjectId
+      const validEnrollments = response.data.filter(enrollment =>
+        enrollment.courseId.subjectId !== null
+      );
+      setEnrollments(validEnrollments);
+      setError(null);
+    } catch (error) {
+      console.error('Error refreshing enrollments:', error);
+      setError('Failed to load courses. Please try again.');
     }
-  }, [selectedCourseId, enrollments]);
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -138,12 +142,13 @@ const MyCourse: React.FC = () => {
         </View>
       ) : (
         /* Course List */
-                  <ScrollView
-            ref={scrollViewRef}
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
+        <View style={styles.scrollView}>
+                     <PullToRefresh
+             onRefresh={handleRefresh}
+             tintColor="#2B3A67"
+             contentContainerStyle={styles.scrollContent}
+             showsVerticalScrollIndicator={false}
+           >
           {enrollments.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Image
@@ -237,7 +242,8 @@ const MyCourse: React.FC = () => {
             })
           )}
 
-        </ScrollView>
+          </PullToRefresh>
+        </View>
               )}
       </SafeAreaView>
     );
