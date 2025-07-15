@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { SafeAreaView, StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, StatusBar, Animated } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, StatusBar, Animated, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import myAxios from '@/utils/my-axios';
 import MarkdownViewer from '../../components/MarkdownViewer';
+import * as Haptics from 'expo-haptics';
 
 const BOT_AVATAR = require('../../assets/images/adaptive-icon.png');
 const USER_AVATAR = require('../../assets/images/avatar.png');
@@ -77,19 +78,35 @@ const TypingIndicator: React.FC = () => {
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
+// Suggestion messages
+const SUGGESTIONS = [
+  "Điểm số của tôi như thế nào?",
+  "Tôi có khóa học nào sắp đến hạn?",
+  "Lịch học tuần này của tôi",
+  "Bài tập nào cần nộp?",
+  "Thông tin về khóa học mới nhất",
+];
+
 const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', text: 'Xin chào! Tôi có thể giúp gì cho bạn?', sender: 'ai', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
   ]);
   const [input, setInput] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const flatListRef = useRef<FlatList>(null);
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
+  // Check if send button should be disabled
+  const isSendDisabled = input.trim().length === 0;
+
   const handleSend = async () => {
     if (!input.trim()) return;
+    
+    // Hide suggestions after first message
+    setShowSuggestions(false);
     
     const now = new Date();
     const newMessage: Message = {
@@ -158,6 +175,90 @@ const Chat: React.FC = () => {
     }
     
     // Auto scroll after response
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 200);
+  };
+
+  const handleSuggestionPress = (suggestion: string) => {
+    // Add haptic feedback for iOS
+    if (Platform.OS === 'ios') {
+      Haptics.selectionAsync();
+    }
+    
+    setInput(suggestion);
+    setShowSuggestions(false);
+    
+    // Auto send after a short delay for better UX
+    setTimeout(() => {
+      handleSendWithText(suggestion);
+    }, 100);
+  };
+
+  const handleSendWithText = async (text: string) => {
+    if (!text.trim()) return;
+    
+    const now = new Date();
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      text: text,
+      sender: 'user',
+      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      read: true,
+    };
+    
+    setMessages((prev) => [...prev, newMessage]);
+    setInput('');
+    
+    // Add typing indicator
+    const typingIndicator: Message = {
+      id: 'typing-indicator',
+      text: '...',
+      sender: 'ai',
+      time: '',
+    };
+    setMessages((prev) => [...prev, typingIndicator]);
+    
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+    
+    try {
+      const res = await myAxios.post(`${API_URL}/api/ai/chat`, { 
+        question: text 
+      });
+      
+      let aiText = 'Xin lỗi, tôi không hiểu.';
+      if (res.data && typeof res.data === 'object' && typeof res.data.answer === 'string') {
+        aiText = res.data.answer;
+      }
+      
+      setMessages((prev) => {
+        const withoutTyping = prev.filter(msg => msg.id !== 'typing-indicator');
+        const aiMessage: Message = {
+          id: Date.now().toString() + '_ai',
+          text: aiText,
+          sender: 'ai',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+        return [...withoutTyping, aiMessage];
+      });
+      
+    } catch (error) {
+      console.log('AI API error:', error);
+      
+      setMessages((prev) => {
+        const withoutTyping = prev.filter(msg => msg.id !== 'typing-indicator');
+        const errorMessage: Message = {
+          id: Date.now().toString() + '_err',
+          text: 'Có lỗi xảy ra, vui lòng thử lại.',
+          sender: 'ai',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+        return [...withoutTyping, errorMessage];
+      });
+    }
+    
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
     }, 200);
@@ -239,6 +340,29 @@ const Chat: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         />
         
+        {/* Message Suggestions */}
+        {showSuggestions && (
+          <View style={styles.suggestionsContainer}>
+            <Text style={styles.suggestionsTitle}>Gợi ý câu hỏi:</Text>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.suggestionsScrollView}
+            >
+              {SUGGESTIONS.map((suggestion, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.suggestionButton}
+                  onPress={() => handleSuggestionPress(suggestion)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.suggestionText}>{suggestion}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+        
         {/* Input Area với SafeAreaView để handle bottom safe area */}
         <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <View style={styles.inputRow}>
@@ -252,8 +376,20 @@ const Chat: React.FC = () => {
               multiline={false}
               blurOnSubmit={false}
             />
-            <TouchableOpacity style={styles.sendBtn} onPress={handleSend}>
-              <MaterialIcons name="send" size={22} color="#fff" />
+            <TouchableOpacity 
+              style={[
+                styles.sendBtn, 
+                isSendDisabled && styles.sendBtnDisabled
+              ]} 
+              onPress={handleSend}
+              disabled={isSendDisabled}
+              activeOpacity={isSendDisabled ? 1 : 0.7}
+            >
+              <MaterialIcons 
+                name="send" 
+                size={22} 
+                color={isSendDisabled ? '#999' : '#fff'} 
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -356,6 +492,42 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 12,
   },
+  // Suggestions Styles
+  suggestionsContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  suggestionsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+  },
+  suggestionsScrollView: {
+    paddingRight: 16,
+  },
+  suggestionButton: {
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  suggestionText: {
+    color: '#2B3A67',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   inputContainer: {
     backgroundColor: '#fff',
     borderTopWidth: 1,
@@ -395,6 +567,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
     transform: [{ scale: 1 }], // Ready for future animations
+  },
+  sendBtnDisabled: {
+    backgroundColor: '#cccccc',
+    shadowOpacity: 0.05,
+    elevation: 1,
   },
   // Typing Indicator Styles
   typingContainer: {
