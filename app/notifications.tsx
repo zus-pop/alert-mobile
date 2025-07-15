@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Platform,
+    RefreshControl,
     SafeAreaView,
     ScrollView,
     StatusBar,
@@ -11,62 +13,14 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import { getNotifications, NotificationData } from "../apis/notifications.api";
 import { IconSymbol } from "../components/ui/IconSymbol";
 import { useAuthStore } from "../stores/useAuthStore";
-import myAxios from "../utils/my-axios";
-
-interface NotificationData {
-    _id: string;
-    enrollmentId: {
-        _id: string;
-        courseId: {
-            _id: string;
-            subjectId: {
-                _id: string;
-                subjectCode: string;
-                subjectName: string;
-            };
-            semesterId: {
-                _id: string;
-                semesterName: string;
-                startDate: string;
-                endDate: string;
-            };
-        };
-        studentId: {
-            _id: string;
-            firstName: string;
-            lastName: string;
-            email: string;
-            image: string;
-        };
-        grade: any[];
-        status: string;
-        enrollmentDate: string;
-        createdAt: string;
-        updatedAt: string;
-        __v: number;
-    };
-    title: string;
-    content: string;
-    status: string;
-    riskLevel: string;
-    isRead: boolean;
-    createdAt: string;
-    updatedAt: string;
-    __v: number;
-    supervisorResponse?: {
-        response: string;
-        plan: string;
-        _id: string;
-        createdAt: string;
-        updatedAt: string;
-    };
-}
 
 const NotificationsScreen: React.FC = () => {
     const [notifications, setNotifications] = useState<NotificationData[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const { accessToken, refreshToken, user } = useAuthStore();
 
     useEffect(() => {
@@ -80,19 +34,42 @@ const NotificationsScreen: React.FC = () => {
         fetchNotifications();
     }, []);
 
+    // Gọi lại API khi trang được focus (khi quay lại từ trang khác)
+    useFocusEffect(
+        useCallback(() => {
+            fetchNotifications();
+        }, [user?._id])
+    );
+
     const fetchNotifications = async () => {
         try {
             setLoading(true);
-            const response = await myAxios.get('alerts', {
-                params: {
-                    studentId: user?._id
-                }
-            });
-            setNotifications(response.data.data || []);
+            const response = await getNotifications(user?._id || '');
+            // Sort notifications by createdAt in descending order (newest first)
+            const sortedNotifications = (response.data || []).sort((a, b) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+            setNotifications(sortedNotifications);
         } catch (error) {
             console.error('Error fetching notifications:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleRefresh = async () => {
+        try {
+            setRefreshing(true);
+            const response = await getNotifications(user?._id || '');
+            // Sort notifications by createdAt in descending order (newest first)
+            const sortedNotifications = (response.data || []).sort((a, b) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+            setNotifications(sortedNotifications);
+        } catch (error) {
+            console.error('Error refreshing notifications:', error);
+        } finally {
+            setRefreshing(false);
         }
     };
 
@@ -134,7 +111,15 @@ const NotificationsScreen: React.FC = () => {
             <ScrollView
                 className="flex-1 px-4 pt-4"
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 80 }}
+                contentContainerStyle={{ paddingBottom: 120 }}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        tintColor="#007AFF"
+                        colors={["#007AFF"]}
+                    />
+                }
             >
                 {loading ? (
                     <View className="flex-1 justify-center items-center py-15">

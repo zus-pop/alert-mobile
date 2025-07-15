@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  Dimensions,
   Image,
   Platform,
   SafeAreaView,
@@ -11,11 +12,10 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Dimensions,
 } from "react-native";
-import PullToRefresh from "../../components/PullToRefresh";
 import { setUser as fetchUserFromAPI } from "../../apis/auth.api";
 import { Enrollment, getStudentEnrollments } from "../../apis/enrollments.api";
+import PullToRefresh from "../../components/PullToRefresh";
 import { useNotification } from "../../contexts/notification-provider";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useSelectedCourseStore } from "../../stores/useSelectedCourseStore";
@@ -65,7 +65,6 @@ const HomeScreen: React.FC = () => {
   const setUser = useAuthStore((state) => state.setUser);
   const { requestPushToken } = useNotification();
   const setSelectedCourseId = useSelectedCourseStore((state) => state.setSelectedCourseId);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filteredEnrollments, setFilteredEnrollments] = useState<Enrollment[]>([]);
@@ -86,20 +85,6 @@ const HomeScreen: React.FC = () => {
   }, [token, user]);
 
   // Fetch alerts
-  useEffect(() => {
-    const fetchAlerts = async () => {
-      try {
-        const response = await myAxios.get('alerts');
-        setAlerts(response.data.data || []);
-      } catch (error) {
-        console.error('Error fetching alerts:', error);
-      }
-    };
-
-    if (token) {
-      fetchAlerts();
-    }
-  }, [token]);
 
   // Fetch enrollments
   useEffect(() => {
@@ -109,20 +94,20 @@ const HomeScreen: React.FC = () => {
         const res = await getStudentEnrollments(user._id);
         const enrollmentsData = res.data || [];
         setEnrollments(enrollmentsData);
-        
+
         // Find all courses with "IN PROGRESS" status for featured banner
         const inProgressCourses = enrollmentsData.filter(
           (enrollment: Enrollment) => enrollment.status === 'IN PROGRESS'
         );
-        
+
         if (inProgressCourses.length > 0) {
           // Sort by most recently enrolled
-          const sortedCourses = inProgressCourses.sort((a: Enrollment, b: Enrollment) => 
+          const sortedCourses = inProgressCourses.sort((a: Enrollment, b: Enrollment) =>
             new Date(b.enrollmentDate).getTime() - new Date(a.enrollmentDate).getTime()
           );
-          
+
           setFeaturedCourses(sortedCourses);
-          
+
           // Fetch attendance data for all in progress courses
           sortedCourses.forEach(course => {
             console.log(`Fetching progress for course: ${course.courseId?.subjectId?.subjectCode} (${course._id})`);
@@ -142,9 +127,9 @@ const HomeScreen: React.FC = () => {
       // Try the attendance API endpoint
       const response = await myAxios.get(`students/${studentId}/enrollments/${enrollmentId}/attendances`);
       const attendances: AttendanceData[] = response.data.data || response.data || [];
-      
+
       console.log(`Attendance data for ${enrollmentId}:`, attendances);
-      
+
       if (attendances.length > 0) {
         // Log first few attendance records to understand structure
         console.log(`Sample attendance records:`, attendances.slice(0, 3));
@@ -153,20 +138,20 @@ const HomeScreen: React.FC = () => {
           (attendance) => {
             const status = attendance.status?.toUpperCase();
             // Include various possible "attended" status values
-            return status === 'PRESENT' || 
-                   status === 'ATTENDED' || 
-                   status === 'YES' || 
-                   status === 'TRUE' ||
-                   status === '1' ||
-                   attendance.presentDate; // If has presentDate, consider as attended
+            return status === 'PRESENT' ||
+              status === 'ATTENDED' ||
+              status === 'YES' ||
+              status === 'TRUE' ||
+              status === '1' ||
+              attendance.presentDate; // If has presentDate, consider as attended
           }
         ).length;
-        
+
         const totalSessions = attendances.length;
         const progressPercentage = Math.round((attendedSessions / totalSessions) * 100);
-        
+
         console.log(`Progress for ${enrollmentId}: ${attendedSessions}/${totalSessions} = ${progressPercentage}%`);
-        
+
         setCoursesProgress(prev => ({
           ...prev,
           [enrollmentId]: progressPercentage
@@ -200,17 +185,16 @@ const HomeScreen: React.FC = () => {
         const courseCode = enrollment.courseId?.subjectId?.subjectCode?.toLowerCase() || "";
         const semesterName = enrollment.courseId?.semesterId?.semesterName?.toLowerCase() || "";
         const query = searchQuery.toLowerCase();
-        
-        return courseName.includes(query) || 
-               courseCode.includes(query) || 
-               semesterName.includes(query);
+
+        return courseName.includes(query) ||
+          courseCode.includes(query) ||
+          semesterName.includes(query);
       });
       setFilteredEnrollments(filtered);
     }
   }, [searchQuery, enrollments]);
 
-  // Check if there are any alerts
-  const hasAlerts = alerts.length > 0;
+
 
   const handleRefresh = async () => {
     try {
@@ -219,29 +203,26 @@ const HomeScreen: React.FC = () => {
         const userData = await fetchUserFromAPI();
         setUser(userData);
       }
-      
-      // Fetch alerts
-      const alertsResponse = await myAxios.get('alerts');
-      setAlerts(alertsResponse.data.data || []);
-      
+
+
       // Fetch enrollments
       if (user?._id) {
         const enrollmentsResponse = await getStudentEnrollments(user._id);
         const enrollmentsData = enrollmentsResponse.data || [];
         setEnrollments(enrollmentsData);
-        
+
         // Update featured courses
         const inProgressCourses = enrollmentsData.filter(
           (enrollment: Enrollment) => enrollment.status === 'IN PROGRESS'
         );
-        
+
         if (inProgressCourses.length > 0) {
-          const sortedCourses = inProgressCourses.sort((a: Enrollment, b: Enrollment) => 
+          const sortedCourses = inProgressCourses.sort((a: Enrollment, b: Enrollment) =>
             new Date(b.enrollmentDate).getTime() - new Date(a.enrollmentDate).getTime()
           );
-          
+
           setFeaturedCourses(sortedCourses);
-          
+
           // Fetch progress for all courses
           sortedCourses.forEach(course => {
             fetchCourseProgress(user._id, course._id);
@@ -276,161 +257,158 @@ const HomeScreen: React.FC = () => {
             onPress={() => router.push("/notifications")}
           >
             <Image source={bell} style={styles.bell} />
-            {hasAlerts && (
-              <View style={[styles.notiDot, styles.notiDotRed]} />
-            )}
           </TouchableOpacity>
         </View>
       </SafeAreaView>
 
       {/* Main Content */}
       <View style={styles.scrollContent}>
-        <PullToRefresh 
+        <PullToRefresh
           onRefresh={handleRefresh}
           tintColor="#2B3A67"
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
-        {/* Search */}
-        <View style={styles.searchBox}>
-          <TextInput 
-            placeholder="Search courses..." 
-            style={styles.searchInput}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+          {/* Search */}
+          <View style={styles.searchBox}>
+            <TextInput
+              placeholder="Search courses..."
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
 
-        {/* Featured Courses - Scrollable */}
-        {featuredCourses.length > 0 && (
-          <View style={styles.featuredSection}>
-            <Text style={styles.featuredSectionTitle}>Latest Courses</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.featuredScrollView}
-              contentContainerStyle={styles.featuredScrollContent}
-            >
-              {featuredCourses.map((course, index) => {
-                const progress = coursesProgress[course._id] || 0;
-                return (
-                  <View key={course._id} style={[styles.featuredCourse, index > 0 && styles.featuredCourseMargin]}>
-                    {course.courseId?.image ? (
-                      <Image 
-                        source={{ uri: course.courseId.image }} 
-                        style={styles.featuredImage} 
-                      />
-                    ) : (
-                      <Image source={uiDesign} style={styles.featuredImage} />
-                    )}
-                    <View style={styles.featuredInfo}>
-                      <Text style={styles.featuredTitle} numberOfLines={2} ellipsizeMode="tail">
-                        {course.courseId?.subjectId?.subjectName || "Course"}
-                      </Text>
-                      <Text style={styles.featuredDesc} numberOfLines={1} ellipsizeMode="tail">
-                        {course.courseId?.subjectId?.subjectCode}
-                      </Text>
-                      <View style={styles.progressBarBg}>
-                        <View 
-                          style={[
-                            styles.progressBarFill, 
-                            { width: `${progress}%` }
-                          ]} 
+          {/* Featured Courses - Scrollable */}
+          {featuredCourses.length > 0 && (
+            <View style={styles.featuredSection}>
+              <Text style={styles.featuredSectionTitle}>Latest Courses</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.featuredScrollView}
+                contentContainerStyle={styles.featuredScrollContent}
+              >
+                {featuredCourses.map((course, index) => {
+                  const progress = coursesProgress[course._id] || 0;
+                  return (
+                    <View key={course._id} style={[styles.featuredCourse, index > 0 && styles.featuredCourseMargin]}>
+                      {course.courseId?.image ? (
+                        <Image
+                          source={{ uri: course.courseId.image }}
+                          style={styles.featuredImage}
                         />
-                        <Text style={styles.progressText}>{progress}%</Text>
+                      ) : (
+                        <Image source={uiDesign} style={styles.featuredImage} />
+                      )}
+                      <View style={styles.featuredInfo}>
+                        <Text style={styles.featuredTitle} numberOfLines={2} ellipsizeMode="tail">
+                          {course.courseId?.subjectId?.subjectName || "Course"}
+                        </Text>
+                        <Text style={styles.featuredDesc} numberOfLines={1} ellipsizeMode="tail">
+                          {course.courseId?.subjectId?.subjectCode}
+                        </Text>
+                        <View style={styles.progressBarBg}>
+                          <View
+                            style={[
+                              styles.progressBarFill,
+                              { width: `${progress}%` }
+                            ]}
+                          />
+                          <Text style={styles.progressText}>{progress}%</Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
 
-        {/* My Course */}
-        <Text style={styles.sectionTitle}>My Course</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.courseList}
-          contentContainerStyle={styles.courseListContent}
-        >
-          {filteredEnrollments.map((enrollment) => (
-            <View key={enrollment._id} style={styles.courseCard}>
-              <TouchableOpacity
-                onPress={() => {
-                  setSelectedCourseId(enrollment._id);
-                  router.push("/(tabs)/my-course");
-                }}
-                style={styles.courseImageContainer}
-              >
-                {enrollment.courseId?.image ? (
-                  <Image 
-                    source={{ uri: enrollment.courseId.image }} 
-                    style={styles.courseImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={[styles.courseImage, { backgroundColor: "#F5F6FA" }]} />
-                )}
-              </TouchableOpacity>
-              <View style={styles.courseTextContainer}>
-                <Text style={styles.courseCardTitle} numberOfLines={2} ellipsizeMode="tail">
-                  {enrollment.courseId?.subjectId?.subjectName || "No name"}
-                </Text>
-                <Text style={styles.courseCardDesc} numberOfLines={1} ellipsizeMode="tail">
-                  {enrollment.courseId?.semesterId?.semesterName || ""}
-                </Text>
-                <TouchableOpacity style={styles.keepLearningBtn}>
-                  <Text style={styles.keepLearningText}>Keep learning</Text>
+          {/* My Course */}
+          <Text style={styles.sectionTitle}>My Course</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.courseList}
+            contentContainerStyle={styles.courseListContent}
+          >
+            {filteredEnrollments.map((enrollment) => (
+              <View key={enrollment._id} style={styles.courseCard}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedCourseId(enrollment._id);
+                    router.push("/(tabs)/my-course");
+                  }}
+                  style={styles.courseImageContainer}
+                >
+                  {enrollment.courseId?.image ? (
+                    <Image
+                      source={{ uri: enrollment.courseId.image }}
+                      style={styles.courseImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={[styles.courseImage, { backgroundColor: "#F5F6FA" }]} />
+                  )}
                 </TouchableOpacity>
+                <View style={styles.courseTextContainer}>
+                  <Text style={styles.courseCardTitle} numberOfLines={2} ellipsizeMode="tail">
+                    {enrollment.courseId?.subjectId?.subjectName || "No name"}
+                  </Text>
+                  <Text style={styles.courseCardDesc} numberOfLines={1} ellipsizeMode="tail">
+                    {enrollment.courseId?.semesterId?.semesterName || ""}
+                  </Text>
+                  <TouchableOpacity style={styles.keepLearningBtn}>
+                    <Text style={styles.keepLearningText}>Keep learning</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+
+          <TouchableOpacity
+            style={styles.seeAllBtn}
+            onPress={() => router.push("/(tabs)/my-course")}
+          >
+            <Text style={styles.seeAllText}>See All Courses</Text>
+          </TouchableOpacity>
+
+          {/* Weekly Reads */}
+          <Text style={styles.sectionTitle}>Weekly Reads</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.readsList}
+            contentContainerStyle={styles.readsListContent}
+          >
+            <View style={styles.readCard}>
+              <Image source={excel} style={styles.readImage} resizeMode="cover" />
+              <View style={styles.readTextContainer}>
+                <Text style={styles.readAuthor}>Rian Mendella</Text>
+                <Text
+                  style={styles.readTitle}
+                  numberOfLines={3}
+                  ellipsizeMode="tail"
+                >
+                  How to improve Microsoft Excel Skills
+                </Text>
               </View>
             </View>
-          ))}
-        </ScrollView>
-        
-        <TouchableOpacity 
-          style={styles.seeAllBtn}
-          onPress={() => router.push("/(tabs)/my-course")}
-        >
-          <Text style={styles.seeAllText}>See All Courses</Text>
-        </TouchableOpacity>
-
-        {/* Weekly Reads */}
-        <Text style={styles.sectionTitle}>Weekly Reads</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.readsList}
-          contentContainerStyle={styles.readsListContent}
-        >
-          <View style={styles.readCard}>
-            <Image source={excel} style={styles.readImage} resizeMode="cover" />
-            <View style={styles.readTextContainer}>
-              <Text style={styles.readAuthor}>Rian Mendella</Text>
-              <Text
-                style={styles.readTitle}
-                numberOfLines={3}
-                ellipsizeMode="tail"
-              >
-                How to improve Microsoft Excel Skills
-              </Text>
+            <View style={styles.readCard}>
+              <Image source={weeklyRead} style={styles.readImage} resizeMode="cover" />
+              <View style={styles.readTextContainer}>
+                <Text style={styles.readAuthor}>John Doe</Text>
+                <Text
+                  style={styles.readTitle}
+                  numberOfLines={3}
+                  ellipsizeMode="tail"
+                >
+                  Learning Tips for Designers
+                </Text>
+              </View>
             </View>
-          </View>
-          <View style={styles.readCard}>
-            <Image source={weeklyRead} style={styles.readImage} resizeMode="cover" />
-            <View style={styles.readTextContainer}>
-              <Text style={styles.readAuthor}>John Doe</Text>
-              <Text
-                style={styles.readTitle}
-                numberOfLines={3}
-                ellipsizeMode="tail"
-              >
-                Learning Tips for Designers
-              </Text>
-            </View>
-          </View>
-        </ScrollView>
+          </ScrollView>
         </PullToRefresh>
       </View>
     </View>
@@ -440,12 +418,12 @@ const HomeScreen: React.FC = () => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: "#fff",
   },
-  headerSafeArea: { 
-    backgroundColor: "#fff", 
+  headerSafeArea: {
+    backgroundColor: "#fff",
     paddingTop: Platform.OS === 'ios' ? 0 : 20,
   },
   header: {
@@ -462,24 +440,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: Math.max(16, screenWidth * 0.04),
     paddingBottom: 120, // Đủ space cho tab bar
   },
-  avatar: { 
-    width: Math.min(56, screenWidth * 0.14), 
-    height: Math.min(56, screenWidth * 0.14), 
-    borderRadius: Math.min(28, screenWidth * 0.07), 
-    marginRight: 12 
+  avatar: {
+    width: Math.min(56, screenWidth * 0.14),
+    height: Math.min(56, screenWidth * 0.14),
+    borderRadius: Math.min(28, screenWidth * 0.07),
+    marginRight: 12
   },
-  welcome: { 
-    color: "#B0B0B0", 
+  welcome: {
+    color: "#B0B0B0",
     fontSize: Math.max(14, screenWidth * 0.04)
   },
-  username: { 
-    color: "#2B3A67", 
-    fontWeight: "bold", 
+  username: {
+    color: "#2B3A67",
+    fontWeight: "bold",
     fontSize: Math.max(18, screenWidth * 0.05),
     flex: 1,
   },
-  bellWrap: { 
-    position: "relative", 
+  bellWrap: {
+    position: "relative",
     marginLeft: 8,
     borderRadius: 20,
     borderWidth: 1,
@@ -487,9 +465,9 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: "#FAFAFA",
   },
-  bell: { 
-    width: Math.min(24, screenWidth * 0.06), 
-    height: Math.min(24, screenWidth * 0.06) 
+  bell: {
+    width: Math.min(24, screenWidth * 0.06),
+    height: Math.min(24, screenWidth * 0.06)
   },
   notiDot: {
     position: "absolute",
@@ -504,8 +482,8 @@ const styles = StyleSheet.create({
   notiDotRed: {
     backgroundColor: "#F55A5A",
   },
-  searchBox: { 
-    marginVertical: 12 
+  searchBox: {
+    marginVertical: 12
   },
   searchInput: {
     backgroundColor: "#F5F6FA",
@@ -541,25 +519,25 @@ const styles = StyleSheet.create({
   featuredCourseMargin: {
     marginLeft: 12,
   },
-  featuredImage: { 
-    width: Math.max(80, screenWidth * 0.2), 
-    height: Math.max(60, screenWidth * 0.15), 
-    borderRadius: 10, 
-    marginRight: 16 
+  featuredImage: {
+    width: Math.max(80, screenWidth * 0.2),
+    height: Math.max(60, screenWidth * 0.15),
+    borderRadius: 10,
+    marginRight: 16
   },
-  featuredInfo: { 
+  featuredInfo: {
     flex: 1,
     justifyContent: "center",
   },
-  featuredTitle: { 
-    color: "#fff", 
-    fontWeight: "bold", 
-    fontSize: Math.max(16, screenWidth * 0.045) 
+  featuredTitle: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: Math.max(16, screenWidth * 0.045)
   },
-  featuredDesc: { 
-    color: "#E0F7FA", 
-    fontSize: Math.max(12, screenWidth * 0.035), 
-    marginBottom: 8 
+  featuredDesc: {
+    color: "#E0F7FA",
+    fontSize: Math.max(12, screenWidth * 0.035),
+    marginBottom: 8
   },
   progressBarBg: {
     backgroundColor: "#B2EBF2",
@@ -592,7 +570,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 12,
   },
-  courseList: { 
+  courseList: {
     marginBottom: 8,
   },
   courseListContent: {
@@ -626,15 +604,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 8,
   },
-  courseCardTitle: { 
-    fontWeight: "bold", 
-    fontSize: Math.max(14, screenWidth * 0.038), 
+  courseCardTitle: {
+    fontWeight: "bold",
+    fontSize: Math.max(14, screenWidth * 0.038),
     color: "#2B3A67",
     lineHeight: Math.max(18, screenWidth * 0.048),
   },
-  courseCardDesc: { 
-    color: "#B0B0B0", 
-    fontSize: Math.max(11, screenWidth * 0.03), 
+  courseCardDesc: {
+    color: "#B0B0B0",
+    fontSize: Math.max(11, screenWidth * 0.03),
     marginVertical: 4,
   },
   keepLearningBtn: {
@@ -644,10 +622,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 4,
   },
-  keepLearningText: { 
-    color: "#fff", 
-    fontWeight: "bold", 
-    fontSize: Math.max(12, screenWidth * 0.035) 
+  keepLearningText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: Math.max(12, screenWidth * 0.035)
   },
   seeAllBtn: {
     alignSelf: "center",
@@ -658,12 +636,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#2B3A67",
   },
-  seeAllText: { 
-    color: "#2B3A67", 
-    fontWeight: "bold", 
-    fontSize: Math.max(13, screenWidth * 0.036) 
+  seeAllText: {
+    color: "#2B3A67",
+    fontWeight: "bold",
+    fontSize: Math.max(13, screenWidth * 0.036)
   },
-  readsList: { 
+  readsList: {
     marginBottom: 16,
   },
   readsListContent: {
@@ -679,26 +657,26 @@ const styles = StyleSheet.create({
     width: Math.max(240, screenWidth * 0.65),
     minHeight: Math.max(120, screenHeight * 0.15),
   },
-  readImage: { 
-    width: Math.max(80, screenWidth * 0.2), 
-    height: Math.max(100, screenWidth * 0.25), 
-    borderRadius: 10, 
+  readImage: {
+    width: Math.max(80, screenWidth * 0.2),
+    height: Math.max(100, screenWidth * 0.25),
+    borderRadius: 10,
     marginRight: 12,
     flex: 0,
   },
-  readTextContainer: { 
-    flex: 1, 
+  readTextContainer: {
+    flex: 1,
     justifyContent: 'flex-start',
     paddingTop: 4,
   },
-  readAuthor: { 
-    color: "#B0B0B0", 
+  readAuthor: {
+    color: "#B0B0B0",
     fontSize: Math.max(11, screenWidth * 0.03),
     marginBottom: 4,
   },
-  readTitle: { 
-    color: "#2B3A67", 
-    fontWeight: "bold", 
+  readTitle: {
+    color: "#2B3A67",
+    fontWeight: "bold",
     fontSize: Math.max(13, screenWidth * 0.035),
     lineHeight: Math.max(16, screenWidth * 0.042),
   },
