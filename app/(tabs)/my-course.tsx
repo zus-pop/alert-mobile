@@ -138,12 +138,12 @@ const MyCourse: React.FC = () => {
         </View>
       ) : (
         /* Course List */
-                  <ScrollView
-            ref={scrollViewRef}
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {enrollments.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Image
@@ -165,7 +165,7 @@ const MyCourse: React.FC = () => {
               const isSelected = enrollment._id === selectedCourseId;
               return (
                 <TouchableOpacity
-                  key={enrollment._id} 
+                  key={enrollment._id}
                   style={[
                     styles.courseCard,
                     isSelected && styles.selectedCourseCard
@@ -223,7 +223,7 @@ const MyCourse: React.FC = () => {
                     </View>
                   </View>
 
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.overviewButton}
                     onPress={() => {
                       // Clear selected course when user interacts with the course
@@ -238,9 +238,9 @@ const MyCourse: React.FC = () => {
           )}
 
         </ScrollView>
-              )}
-      </SafeAreaView>
-    );
+      )}
+    </SafeAreaView>
+  );
 };
 
 export default MyCourse;
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   scrollContent: {
-    paddingBottom: 80, // Add space for bottom tabs
+    paddingBottom: 120, // Add space for bottom tabs
   },
 
   courseCard: {

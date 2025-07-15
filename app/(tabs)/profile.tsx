@@ -6,13 +6,11 @@ import {
   Image,
   RefreshControl,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-  FlatList,
-  StatusBar,
-  Platform,
+  View
 } from 'react-native';
 import { Enrollment, EnrollmentStatusGroup, getStudentEnrollments } from '../../apis/enrollments.api';
 import LogoutModal from '../../components/LogoutModal';
@@ -112,7 +110,7 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       className="flex-1 bg-white"
-      contentContainerStyle={{ paddingBottom: 100 }}
+      contentContainerStyle={{ paddingBottom: 120 }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
@@ -200,7 +198,7 @@ export default function ProfileScreen() {
           {/* Course List - Vertical column, không FlatList/ScrollView con */}
           {getInProgressCourses().length > 0 ? (
             getInProgressCourses().map((enrollment) => (
-              <View key={enrollment._id} style={[styles.latestCourseCard, { marginBottom: 12 }]}> 
+              <View key={enrollment._id} style={[styles.latestCourseCard, { marginBottom: 12 }]}>
                 {typeof enrollment.courseId === 'object' && 'image' in enrollment.courseId && enrollment.courseId.image ? (
                   <Image
                     source={{ uri: (enrollment.courseId as any).image }}
