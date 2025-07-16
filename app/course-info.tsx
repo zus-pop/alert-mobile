@@ -48,7 +48,7 @@ const CourseInfo = () => {
     getTextColor: (grade: number) => ['#6B7280', '#DC2626', '#C2410C', '#92400E', '#166534'][grade === 0 ? 0 : grade >= 8 ? 4 : grade >= 6 ? 3 : grade >= 5 ? 2 : 1],
     getMessage: (grade: number) => ['No grades recorded yet', 'Work harder to raise your grades!', 'You\'re doing okay. Keep improving!', 'Good job! Keep up the good work!', 'Excellent! Your grades are outstanding!'][grade === 0 ? 0 : grade >= 8 ? 4 : grade >= 6 ? 3 : grade >= 5 ? 2 : 1],
     format: (grade: number) => grade === 0 ? 'N/A' : grade.toFixed(1),
-    truncate: (type: string) => type.length <= 8 ? type : type.substring(0, 6) + '..'
+    // truncate: (type: string) => type.length <= 8 ? type : type.substring(0, 6) + '..'
   };
 
   const statusMap: Record<string, { color: string; icon: string }> = {
@@ -135,44 +135,119 @@ const CourseInfo = () => {
     return { ...counts, totalSessions: attendances.length, attendanceRate: Math.round((counts.presentCount / attendances.length) * 100) };
   })();
 
-  // Render circular progress indicator with multi-layer design
+  // Render circular progress indicator with single ring design
   const renderCircularProgress = (percentage: number, size: number = 170) => {
-    const centerX = 93, centerY = 93;
-    const radii = [85, 69, 53, 37];
-    const circumferences = radii.map(r => 2 * Math.PI * r);
-    const strokes = [
-      attendanceStats.totalSessions > 0 ? (attendanceStats.presentCount / attendanceStats.totalSessions) * circumferences[0] : 0,
-      attendanceStats.totalSessions > 0 ? (attendanceStats.absentCount / attendanceStats.totalSessions) * circumferences[1] : 0,
-      attendanceStats.totalSessions > 0 ? (attendanceStats.notYetCount / attendanceStats.totalSessions) * circumferences[3] : 0
+    const centerX = size / 2;
+    const centerY = size / 2;
+    const radius = size / 2 - 20;
+    const strokeWidth = 16;
+    
+    // Calculate angles for each segment
+    const total = attendanceStats.totalSessions;
+    const presentPercentage = total > 0 ? (attendanceStats.presentCount / total) : 0;
+    const absentPercentage = total > 0 ? (attendanceStats.absentCount / total) : 0;
+    const notYetPercentage = total > 0 ? (attendanceStats.notYetCount / total) : 0;
+    
+    // Convert to angles (360 degrees total)
+    const gapAngle = 4; // Small gap between segments
+    const totalGaps = 3 * gapAngle;
+    const availableAngle = 360 - totalGaps;
+    
+    const presentAngle = presentPercentage * availableAngle;
+    const absentAngle = absentPercentage * availableAngle;
+    const notYetAngle = notYetPercentage * availableAngle;
+    
+    // Helper function to create arc path
+    const createArcPath = (startAngle: number, endAngle: number, innerRadius: number, outerRadius: number) => {
+      const start = startAngle * (Math.PI / 180);
+      const end = endAngle * (Math.PI / 180);
+      
+      const x1 = centerX + innerRadius * Math.cos(start);
+      const y1 = centerY + innerRadius * Math.sin(start);
+      const x2 = centerX + outerRadius * Math.cos(start);
+      const y2 = centerY + outerRadius * Math.sin(start);
+      
+      const x3 = centerX + outerRadius * Math.cos(end);
+      const y3 = centerY + outerRadius * Math.sin(end);
+      const x4 = centerX + innerRadius * Math.cos(end);
+      const y4 = centerY + innerRadius * Math.sin(end);
+      
+      const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+      
+      return `M ${x1} ${y1} L ${x2} ${y2} A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${x3} ${y3} L ${x4} ${y4} A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x1} ${y1}`;
+    };
+    
+    // Starting from top (-90 degrees)
+    let currentAngle = -90;
+    const innerRadius = radius - strokeWidth / 2;
+    const outerRadius = radius + strokeWidth / 2;
+    
+    const segments = [
+      { 
+        angle: presentAngle, 
+        color: '#03045E', // Dark blue
+        count: attendanceStats.presentCount,
+        label: 'Attended'
+      },
+      { 
+        angle: absentAngle, 
+        color: '#0077B6', // Medium blue
+        count: attendanceStats.absentCount,
+        label: 'Absent'
+      },
+      { 
+        angle: notYetAngle, 
+        color: '#90E0EF', // Light blue
+        count: attendanceStats.notYetCount,
+        label: 'Not Yet'
+      }
     ];
-    const colors = ['#03045E', '#0077B6', '#90E0EF'];
-    const counts = [attendanceStats.presentCount, attendanceStats.absentCount, attendanceStats.notYetCount];
 
     return (
       <View style={styles.progressContainer}>
         <View style={[styles.progressWrapper, { width: size, height: size }]}>
-          <Svg width={size} height={size} viewBox="0 0 186 186">
-            <Circle cx={centerX} cy={centerY} r={radii[0]} fill="none" stroke="#F3F4F6" strokeWidth="16" strokeLinecap="round" />
-            {[0, 1, 2].map(i => (
-              <Circle
-                key={i}
-                cx={centerX} cy={centerY} r={radii[i === 2 ? 3 : i]}
-                fill="none" stroke={colors[i]} strokeWidth="16" strokeLinecap="round"
-                strokeDasharray={`${strokes[i]} ${circumferences[i === 2 ? 3 : i]}`}
-                strokeDashoffset={circumferences[i === 2 ? 3 : i] / 4}
-                transform={`rotate(-90 ${centerX} ${centerY})`}
-              />
-            ))}
+          <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+            {/* Background circle */}
+            <Circle 
+              cx={centerX} 
+              cy={centerY} 
+              r={radius} 
+              fill="none" 
+              stroke="#F3F4F6" 
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+            />
+            
+            {/* Pie segments */}
+            {segments.map((segment, index) => {
+              if (segment.angle === 0) return null;
+              
+              const segmentPath = createArcPath(currentAngle, currentAngle + segment.angle, innerRadius, outerRadius);
+              const nextAngle = currentAngle + segment.angle + gapAngle;
+              
+              const result = (
+                <Path
+                  key={index}
+                  d={segmentPath}
+                  fill={segment.color}
+                  stroke="none"
+                />
+              );
+              
+              currentAngle = nextAngle;
+              return result;
+            })}
           </Svg>
+          
           <View style={styles.progressCenter}>
             <Text style={styles.progressPercentage}>{Math.round(percentage)}%</Text>
           </View>
         </View>
         
         <View style={styles.sideNumbers}>
-          {counts.map((count, i) => (
-            <View key={i} style={[styles.sideNumber, { backgroundColor: colors[i] }]}>
-              <Text style={styles.sideNumberText}>{count}</Text>
+          {segments.map((segment, i) => (
+            <View key={i} style={[styles.sideNumber, { backgroundColor: segment.color }]}>
+              <Text style={styles.sideNumberText}>{segment.count}</Text>
             </View>
           ))}
         </View>
@@ -213,10 +288,10 @@ const CourseInfo = () => {
               <Text style={styles.gradeScore}>{grade.score.toFixed(1)}</Text>
             </View>
             <View style={styles.gradeLabelContainer}>
-              <Text style={styles.gradeLabel} numberOfLines={1} ellipsizeMode="tail">
-                {gradeHelpers.truncate(grade.type)}
+              <Text style={styles.gradeLabel}>
+                {grade.type}
               </Text>
-              <Text style={styles.gradeWeight} numberOfLines={1}>
+              <Text style={styles.gradeWeight}>
                 ({Math.round(grade.weight * 100)}%)
               </Text>
             </View>
@@ -236,13 +311,13 @@ const CourseInfo = () => {
     }
 
     const grades = studentEnrollment.grade;
-    const chartWidth = 360, chartHeight = 100, padding = 40;
+    const chartWidth = 360, chartHeight = 120, padding = 50;
     const graphWidth = chartWidth - (padding * 2);
-    const graphHeight = chartHeight - 20;
+    const graphHeight = chartHeight - 30;
 
     const points = grades.map((grade, index) => ({
       x: padding + (index * (graphWidth / Math.max(grades.length - 1, 1))),
-      y: chartHeight - 10 - ((grade.score / 10) * graphHeight),
+      y: chartHeight - 20 - ((grade.score / 10) * graphHeight),
       score: grade.score,
       type: grade.type
     }));
@@ -264,7 +339,7 @@ const CourseInfo = () => {
           {[2, 4, 6, 8].map((score) => (
             <Path
               key={score}
-              d={`M ${padding} ${chartHeight - 10 - ((score / 10) * graphHeight)} L ${chartWidth - padding} ${chartHeight - 10 - ((score / 10) * graphHeight)}`}
+              d={`M ${padding} ${chartHeight - 20 - ((score / 10) * graphHeight)} L ${chartWidth - padding} ${chartHeight - 20 - ((score / 10) * graphHeight)}`}
               stroke="#E5E7EB"
               strokeWidth="1"
               strokeDasharray="2,2"
@@ -298,7 +373,7 @@ const CourseInfo = () => {
         <View style={styles.gradeLabelsContainer}>
           {grades.map((grade, index) => (
             <View key={index} style={styles.gradeLabelItem}>
-              <Text style={styles.gradeChartLabel}>{grade.type.substring(0, 6)}</Text>
+              <Text style={styles.gradeChartLabel}>{grade.type}</Text>
               <Text style={styles.gradeChartScore}>{grade.score}</Text>
             </View>
           ))}
@@ -473,7 +548,11 @@ const CourseInfo = () => {
           <View style={styles.chartBody}>
             {renderGradeBars()}
           </View>
-
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderTitle}>
+              <Text style={styles.cardTitle}>Study Progress</Text>
+            </View>
+          </View>
           {/* Success Footer - Dynamic color based on grade */}
           <View style={[styles.successFooter, { backgroundColor: gradeHelpers.getCardColor(overallGrade) }]}>
             <View style={styles.successContent}>
@@ -703,16 +782,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    height: 160,
-    marginBottom: 12,
+    height: 220,
+    marginBottom: 20,
     marginTop: 40,
-    gap: 16, // Reduced gap for better consistency
+    gap: 12,
   },
   gradeItem: {
     flex: 1,
     alignItems: 'center',
     gap: 8,
-    minWidth: 0, // Allow flex items to shrink
+    minWidth: 50,
+    maxWidth: 80,
   },
   gradeBarContainer: {
     width: 40,
@@ -742,16 +822,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    paddingHorizontal: 2,
+    paddingHorizontal: 4,
+    marginTop: 12,
+    minHeight: 40,
   },
   gradeLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#000000',
     textAlign: 'center',
     fontWeight: '500',
+    lineHeight: 14,
   },
   gradeWeight: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#6B7280',
     marginTop: 2,
     textAlign: 'center',
@@ -797,7 +880,7 @@ const styles = StyleSheet.create({
     color: '#166534',
   },
   successChartContainer: {
-    height: 180, // Increased height to accommodate labels and prevent overflow
+    height: 200,
     overflow: 'hidden',
     paddingTop: 10,
   },
@@ -995,25 +1078,30 @@ const styles = StyleSheet.create({
   gradeLabelsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 40,
-    marginTop: 16, // Increased margin for better spacing
+    paddingHorizontal: 20,
+    marginTop: 20,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   gradeLabelItem: {
     alignItems: 'center',
     flex: 1,
+    minWidth: 60,
+    paddingHorizontal: 4,
   },
   gradeChartLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#374151',
     textAlign: 'center',
     fontWeight: '500',
+    lineHeight: 14,
   },
   gradeChartScore: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#1F2937',
     fontWeight: '700',
     textAlign: 'center',
-    marginTop: 4, // Increased margin for better spacing
+    marginTop: 6,
   },
   noGradeChartText: {
     fontSize: 14,
