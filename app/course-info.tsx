@@ -1,13 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import * as React from 'react';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
-  Image,
   Modal,
-  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -29,11 +26,9 @@ import {
 import { useAuthStore } from '../stores/useAuthStore';
 import { IconSymbol } from '../components/ui/IconSymbol';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 
-interface CourseInfoProps {}
-
-const CourseInfo: React.FC<CourseInfoProps> = () => {
+const CourseInfo = () => {
   const { courseId, enrollmentId } = useLocalSearchParams<{ courseId: string; enrollmentId?: string }>();
   const [course, setCourse] = useState<CourseData | null>(null);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
@@ -44,6 +39,24 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedGrade, setSelectedGrade] = useState<{type: string, score: number, weight: number} | null>(null);
   const { user } = useAuthStore();
+
+  // Helper functions consolidated
+  const gradeHelpers = {
+    getColor: (score: number) => score >= 8 ? '#4DAF00' : score >= 5 ? '#FFA500' : score > 0 ? '#EF4444' : '#E5E7EB',
+    getStatus: (score: number) => score >= 8 ? 'Excellent' : score >= 6 ? 'Good' : score >= 5 ? 'Average' : score > 0 ? 'Poor' : 'Not Graded',
+    getCardColor: (grade: number) => ['#F3F4F6', '#FEF2F2', '#FEF3F2', '#FFFBEB', '#F0FDF4'][grade === 0 ? 0 : grade >= 8 ? 4 : grade >= 6 ? 3 : grade >= 5 ? 2 : 1],
+    getTextColor: (grade: number) => ['#6B7280', '#DC2626', '#C2410C', '#92400E', '#166534'][grade === 0 ? 0 : grade >= 8 ? 4 : grade >= 6 ? 3 : grade >= 5 ? 2 : 1],
+    getMessage: (grade: number) => ['No grades recorded yet', 'Work harder to raise your grades!', 'You\'re doing okay. Keep improving!', 'Good job! Keep up the good work!', 'Excellent! Your grades are outstanding!'][grade === 0 ? 0 : grade >= 8 ? 4 : grade >= 6 ? 3 : grade >= 5 ? 2 : 1],
+    format: (grade: number) => grade === 0 ? 'N/A' : grade.toFixed(1),
+    truncate: (type: string) => type.length <= 8 ? type : type.substring(0, 6) + '..'
+  };
+
+  const statusMap: Record<string, { color: string; icon: string }> = {
+    PASSED: { color: '#22C55E', icon: 'checkmark-circle-outline' },
+    'NOT PASSED': { color: '#EF4444', icon: 'close-circle-outline' },
+    'IN PROGRESS': { color: '#F59E0B', icon: 'time-outline' }
+  };
+  const getStatusInfo = (status: string) => statusMap[status?.toUpperCase()] || { color: '#6B7280', icon: 'help-circle-outline' };
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
@@ -88,53 +101,17 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
         // Fetch detailed student enrollment data
         try {
           const studentEnrollmentResponse = await getStudentEnrollmentById(user._id, userEnrollment._id);
-          
-          const enrollmentData = studentEnrollmentResponse.data || studentEnrollmentResponse;
-          
-          setStudentEnrollment(enrollmentData);
-        } catch (studentEnrollmentError) {
-          console.error('Error fetching student enrollment details:', studentEnrollmentError);
-          // Continue even if this fails
+          setStudentEnrollment(studentEnrollmentResponse.data || studentEnrollmentResponse);
+        } catch (error) {
+          console.error('Error fetching student enrollment details:', error);
         }
-
-        // // Fetch study progress
-        // try {
-        //   const progressResponse = await getStudyProgress(user._id, userEnrollment._id);
-        //   setStudyProgress(progressResponse.data);
-        // } catch (progressError) {
-        //   console.error('Error fetching study progress:', progressError);
-        //   // Set default values if API call fails
-        //   setStudyProgress({
-        //     enrollmentId: userEnrollment._id,
-        //     totalSessions: 20,
-        //     attendedSessions: 17,
-        //     attendanceRate: 87,
-        //     presentCount: 15,
-        //     absentCount: 3,
-        //     lateCount: 2,
-        //     overallGrade: 8.5,
-        //     grades: [
-        //       { type: 'Project', weight: 0.2, score: 4.5 },
-        //       { type: 'PE', weight: 0.3, score: 8.5 },
-        //       { type: 'PT', weight: 0.2, score: 6.0 },
-        //       { type: 'FE', weight: 0.3, score: 7.5 },
-        //     ],
-        //     status: 'IN PROGRESS'
-        //   });
-        // }
 
         // Fetch attendance records
         try {
           const attendanceResponse = await getStudentAttendances(user._id, userEnrollment._id);
-          console.log('Attendance response:', attendanceResponse);
-          console.log('Attendance data length:', attendanceResponse.length);
-          console.log('First attendance status:', attendanceResponse[0]?.status);
-          
-          // Set the attendance data correctly
           setAttendances(attendanceResponse);
-        } catch (attendanceError) {
-          console.error('Error fetching attendance records:', attendanceError);
-          // Continue even if this fails
+        } catch (error) {
+          console.error('Error fetching attendance records:', error);
         }
 
       } catch (error) {
@@ -148,134 +125,63 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
     fetchCourseDetails();
   }, [courseId, user?._id]);
 
-  // Calculate attendance statistics from actual attendance records
-  const calculateAttendanceStats = () => {
-    if (!attendances || attendances.length === 0) {
-      return {
-        totalSessions: studyProgress?.totalSessions || 20,
-        presentCount: studyProgress?.presentCount || 0,
-        absentCount: studyProgress?.absentCount || 0,
-        notYetCount: 20,
-        attendanceRate: studyProgress?.attendanceRate || 0
-      };
-    }
-
-    const presentCount = attendances.filter(att => att.status === 'ATTENDED').length;
-    const absentCount = attendances.filter(att => att.status === 'ABSENT').length;
-    const notYetCount = attendances.filter(att => att.status === 'NOT YET').length;
-    const totalSessions = attendances.length;
-    const attendanceRate = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
-
-    return {
-      totalSessions,
-      presentCount,
-      absentCount,
-      notYetCount,
-      attendanceRate
-    };
-  };
+  // Calculate attendance statistics
+  const attendanceStats = (() => {
+    if (!attendances?.length) return { totalSessions: 20, presentCount: 0, absentCount: 0, notYetCount: 20, attendanceRate: 0 };
+    const counts = attendances.reduce((acc, att) => {
+      acc[att.status === 'ATTENDED' ? 'presentCount' : att.status === 'ABSENT' ? 'absentCount' : 'notYetCount']++;
+      return acc;
+    }, { presentCount: 0, absentCount: 0, notYetCount: 0 });
+    return { ...counts, totalSessions: attendances.length, attendanceRate: Math.round((counts.presentCount / attendances.length) * 100) };
+  })();
 
   // Render circular progress indicator with multi-layer design
   const renderCircularProgress = (percentage: number, size: number = 170) => {
-    const centerX = 93;
-    const centerY = 93;
-    const radius1 = 85;
-    const radius2 = 69;
-    const radius3 = 53;
-    const radius4 = 37;
-    
-    const circumference1 = 2 * Math.PI * radius1;
-    const circumference2 = 2 * Math.PI * radius2;
-    const circumference3 = 2 * Math.PI * radius3;
-    const circumference4 = 2 * Math.PI * radius4;
-    
-    const attendanceStats = calculateAttendanceStats();
-    
-    // Calculate stroke dash arrays for each layer
-    const presentStroke = attendanceStats.totalSessions > 0 ? (attendanceStats.presentCount / attendanceStats.totalSessions) * circumference1 : 0;
-    const absentStroke = attendanceStats.totalSessions > 0 ? (attendanceStats.absentCount / attendanceStats.totalSessions) * circumference2 : 0;
-    const notYetStroke = attendanceStats.totalSessions > 0 ? (attendanceStats.notYetCount / attendanceStats.totalSessions) * circumference4 : 0;
+    const centerX = 93, centerY = 93;
+    const radii = [85, 69, 53, 37];
+    const circumferences = radii.map(r => 2 * Math.PI * r);
+    const strokes = [
+      attendanceStats.totalSessions > 0 ? (attendanceStats.presentCount / attendanceStats.totalSessions) * circumferences[0] : 0,
+      attendanceStats.totalSessions > 0 ? (attendanceStats.absentCount / attendanceStats.totalSessions) * circumferences[1] : 0,
+      attendanceStats.totalSessions > 0 ? (attendanceStats.notYetCount / attendanceStats.totalSessions) * circumferences[3] : 0
+    ];
+    const colors = ['#03045E', '#0077B6', '#90E0EF'];
+    const counts = [attendanceStats.presentCount, attendanceStats.absentCount, attendanceStats.notYetCount];
 
     return (
       <View style={styles.progressContainer}>
         <View style={[styles.progressWrapper, { width: size, height: size }]}>
           <Svg width={size} height={size} viewBox="0 0 186 186">
-            {/* Background circle */}
-            <Circle
-              cx={centerX}
-              cy={centerY}
-              r={radius1}
-              fill="none"
-              stroke="#F3F4F6"
-              strokeWidth="16"
-              strokeLinecap="round"
-            />
-            {/* Present (dark blue) - outermost layer */}
-            <Circle
-              cx={centerX}
-              cy={centerY}
-              r={radius1}
-              fill="none"
-              stroke="#03045E"
-              strokeWidth="16"
-              strokeLinecap="round"
-              strokeDasharray={`${presentStroke} ${circumference1}`}
-              strokeDashoffset={circumference1 / 4}
-              transform={`rotate(-90 ${centerX} ${centerY})`}
-            />
-            {/* Absent (medium blue) */}
-            <Circle
-              cx={centerX}
-              cy={centerY}
-              r={radius2}
-              fill="none"
-              stroke="#0077B6"
-              strokeWidth="16"
-              strokeLinecap="round"
-              strokeDasharray={`${absentStroke} ${circumference2}`}
-              strokeDashoffset={circumference2 / 4}
-              transform={`rotate(-90 ${centerX} ${centerY})`}
-            />
-            {/* Not Yet (lightest blue) */}
-            <Circle
-              cx={centerX}
-              cy={centerY}
-              r={radius4}
-              fill="none"
-              stroke="#90E0EF"
-              strokeWidth="16"
-              strokeLinecap="round"
-              strokeDasharray={`${notYetStroke} ${circumference4}`}
-              strokeDashoffset={circumference4 / 4}
-              transform={`rotate(-90 ${centerX} ${centerY})`}
-            />
+            <Circle cx={centerX} cy={centerY} r={radii[0]} fill="none" stroke="#F3F4F6" strokeWidth="16" strokeLinecap="round" />
+            {[0, 1, 2].map(i => (
+              <Circle
+                key={i}
+                cx={centerX} cy={centerY} r={radii[i === 2 ? 3 : i]}
+                fill="none" stroke={colors[i]} strokeWidth="16" strokeLinecap="round"
+                strokeDasharray={`${strokes[i]} ${circumferences[i === 2 ? 3 : i]}`}
+                strokeDashoffset={circumferences[i === 2 ? 3 : i] / 4}
+                transform={`rotate(-90 ${centerX} ${centerY})`}
+              />
+            ))}
           </Svg>
-          {/* Center percentage */}
           <View style={styles.progressCenter}>
             <Text style={styles.progressPercentage}>{Math.round(percentage)}%</Text>
           </View>
         </View>
         
-        {/* Side numbers */}
         <View style={styles.sideNumbers}>
-          <View style={[styles.sideNumber, { backgroundColor: '#03045E' }]}>
-            <Text style={styles.sideNumberText}>{attendanceStats.presentCount}</Text>
-          </View>
-          <View style={[styles.sideNumber, { backgroundColor: '#0077B6' }]}>
-            <Text style={styles.sideNumberText}>{attendanceStats.absentCount}</Text>
-          </View>
-          <View style={[styles.sideNumber, { backgroundColor: '#90E0EF' }]}>
-            <Text style={styles.sideNumberText}>{attendanceStats.notYetCount}</Text>
-          </View>
+          {counts.map((count, i) => (
+            <View key={i} style={[styles.sideNumber, { backgroundColor: colors[i] }]}>
+              <Text style={styles.sideNumberText}>{count}</Text>
+            </View>
+          ))}
         </View>
       </View>
     );
   };
 
-  // Render grade bars with actual data
   const renderGradeBars = () => {
-    // Check if we have actual grade data
-    if (!studentEnrollment?.grade || studentEnrollment.grade.length === 0) {
+    if (!studentEnrollment?.grade?.length) {
       return (
         <View style={styles.noGradeContainer}>
           <Ionicons name="school-outline" size={48} color="#9CA3AF" />
@@ -285,18 +191,9 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
       );
     }
 
-    const grades = studentEnrollment.grade;
-    const maxScore = 10;
-
-    // Function to truncate long grade type names
-    const truncateGradeType = (type: string) => {
-      if (type.length <= 8) return type;
-      return type.substring(0, 6) + '..';
-    };
-
     return (
       <View style={styles.gradeContainer}>
-        {grades.map((grade, index) => (
+        {studentEnrollment.grade.map((grade, index) => (
           <TouchableOpacity 
             key={index} 
             style={styles.gradeItem}
@@ -308,8 +205,8 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
                 style={[
                   styles.gradeBar, 
                   { 
-                    height: `${Math.max((grade.score / maxScore) * 100, 8)}%`, // Minimum 8% height for better visibility
-                    backgroundColor: grade.score >= 8 ? '#4DAF00' : grade.score >= 5 ? '#FFA500' :  grade.score > 0 ? '#EF4444' : '#E5E7EB'
+                    height: `${Math.max((grade.score / 10) * 100, 8)}%`,
+                    backgroundColor: gradeHelpers.getColor(grade.score)
                   }
                 ]} 
               />
@@ -317,7 +214,7 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
             </View>
             <View style={styles.gradeLabelContainer}>
               <Text style={styles.gradeLabel} numberOfLines={1} ellipsizeMode="tail">
-                {truncateGradeType(grade.type)}
+                {gradeHelpers.truncate(grade.type)}
               </Text>
               <Text style={styles.gradeWeight} numberOfLines={1}>
                 ({Math.round(grade.weight * 100)}%)
@@ -329,56 +226,88 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
     );
   };
 
-  // Render success chart with wave pattern
   const renderSuccessChart = () => {
+    if (!studentEnrollment?.grade?.length) {
+      return (
+        <View style={styles.successChartContainer}>
+          <Text style={styles.noGradeChartText}>No grade data to display</Text>
+        </View>
+      );
+    }
+
+    const grades = studentEnrollment.grade;
+    const chartWidth = 360, chartHeight = 100, padding = 40;
+    const graphWidth = chartWidth - (padding * 2);
+    const graphHeight = chartHeight - 20;
+
+    const points = grades.map((grade, index) => ({
+      x: padding + (index * (graphWidth / Math.max(grades.length - 1, 1))),
+      y: chartHeight - 10 - ((grade.score / 10) * graphHeight),
+      score: grade.score,
+      type: grade.type
+    }));
+
+    const linePath = points.map((point, index) => 
+      `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`
+    ).join(' ');
+
     return (
       <View style={styles.successChartContainer}>
-        <Svg width="100%" height={96} viewBox="0 0 392 96" preserveAspectRatio="none">
+        <Svg width={chartWidth} height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
           <Defs>
-            <LinearGradient id="successGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <Stop offset="0%" stopColor="#4DAF00" stopOpacity="0.38" />
-              <Stop offset="100%" stopColor="white" stopOpacity="0" />
+            <LinearGradient id="gradeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <Stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3" />
+              <Stop offset="100%" stopColor="#3B82F6" stopOpacity="0.05" />
             </LinearGradient>
           </Defs>
           
-          {/* Area fill */}
-          <Path
-            d="M0 80 Q50 60 100 65 T200 55 T300 45 T392 35 L392 96 L0 96 Z"
-            fill="url(#successGradient)"
-          />
+          {[2, 4, 6, 8].map((score) => (
+            <Path
+              key={score}
+              d={`M ${padding} ${chartHeight - 10 - ((score / 10) * graphHeight)} L ${chartWidth - padding} ${chartHeight - 10 - ((score / 10) * graphHeight)}`}
+              stroke="#E5E7EB"
+              strokeWidth="1"
+              strokeDasharray="2,2"
+            />
+          ))}
           
-          {/* Line */}
-          <Path
-            d="M0 80 Q50 60 100 65 T200 55 T300 45 T392 35"
-            stroke="#52AC0B"
-            strokeWidth="3"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+          {linePath && (
+            <Path
+              d={linePath}
+              stroke="#3B82F6"
+              strokeWidth="3"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          )}
+          
+          {points.map((point, index) => (
+            <Circle
+              key={index}
+              cx={point.x}
+              cy={point.y}
+              r="4"
+              fill="#3B82F6"
+              stroke="#FFFFFF"
+              strokeWidth="2"
+            />
+          ))}
         </Svg>
+        
+        <View style={styles.gradeLabelsContainer}>
+          {grades.map((grade, index) => (
+            <View key={index} style={styles.gradeLabelItem}>
+              <Text style={styles.gradeChartLabel}>{grade.type.substring(0, 6)}</Text>
+              <Text style={styles.gradeChartScore}>{grade.score}</Text>
+            </View>
+          ))}
+        </View>
       </View>
     );
   };
-
-  // Render grade detail modal
   const renderGradeModal = () => {
     if (!selectedGrade) return null;
-
-    const getGradeColorByScore = (score: number) => {
-      if (score >= 8) return '#4DAF00';
-      if (score >= 5) return '#FFA500';
-      if (score > 0) return '#EF4444';
-      return '#E5E7EB';
-    };
-
-    const getGradeStatus = (score: number) => {
-      if (score >= 8) return 'Excellent';
-      if (score >= 6) return 'Good';
-      if (score >= 5) return 'Average';
-      if (score > 0) return 'Poor';
-      return 'Not Graded';
-    };
 
     return (
       <Modal
@@ -400,13 +329,13 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
             </View>
             
             <View style={styles.gradeDetailContainer}>
-              <View style={[styles.gradeColorIndicator, { backgroundColor: getGradeColorByScore(selectedGrade.score) }]} />
+              <View style={[styles.gradeColorIndicator, { backgroundColor: gradeHelpers.getColor(selectedGrade.score) }]} />
               <View style={styles.gradeDetailInfo}>
                 <Text style={styles.gradeDetailType}>{selectedGrade.type}</Text>
                 <Text style={styles.gradeDetailScore}>{selectedGrade.score.toFixed(1)}/10</Text>
                 <Text style={styles.gradeDetailWeight}>Weight: {Math.round(selectedGrade.weight * 100)}%</Text>
-                <Text style={[styles.gradeDetailStatus, { color: getGradeColorByScore(selectedGrade.score) }]}>
-                  {getGradeStatus(selectedGrade.score)}
+                <Text style={[styles.gradeDetailStatus, { color: gradeHelpers.getColor(selectedGrade.score) }]}>
+                  {gradeHelpers.getStatus(selectedGrade.score)}
                 </Text>
               </View>
             </View>
@@ -426,50 +355,19 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
   // Render custom bottom tab bar
   const renderBottomTabs = () => {
     const tabItems = [
-      { 
-        name: 'home', 
-        title: 'Home', 
-        icon: 'house.fill',
-        route: '/(tabs)/home'
-      },
-      { 
-        name: 'chat', 
-        title: 'Chat', 
-        icon: 'chat.fill',
-        route: '/(tabs)/chat'
-      },
-      { 
-        name: 'my-course', 
-        title: 'My Course', 
-        icon: 'book.fill',
-        route: '/(tabs)/my-course'
-      },
-      { 
-        name: 'profile', 
-        title: 'My Profile', 
-        icon: 'person.fill',
-        route: '/(tabs)/profile'
-      }
+      { name: 'home', title: 'Home', icon: 'house.fill', route: '/(tabs)/home' },
+      { name: 'chat', title: 'Chat', icon: 'chat.fill', route: '/(tabs)/chat' },
+      { name: 'my-course', title: 'My Course', icon: 'book.fill', route: '/(tabs)/my-course' },
+      { name: 'profile', title: 'My Profile', icon: 'person.fill', route: '/(tabs)/profile' }
     ];
 
     return (
       <View style={styles.bottomTabContainer}>
         <View style={styles.bottomTabBar}>
           {tabItems.map((tab, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.tabItem}
-              onPress={() => router.push(tab.route as any)}
-            >
-              <IconSymbol 
-                size={24} 
-                name={tab.icon as any} 
-                color={tab.name === 'my-course' ? '#3B82F6' : '#6B7280'} 
-              />
-              <Text style={[
-                styles.tabLabel,
-                { color: tab.name === 'my-course' ? '#3B82F6' : '#6B7280' }
-              ]}>
+            <TouchableOpacity key={index} style={styles.tabItem} onPress={() => router.push(tab.route as any)}>
+              <IconSymbol size={24} name={tab.icon as any} color={tab.name === 'my-course' ? '#3B82F6' : '#6B7280'} />
+              <Text style={[styles.tabLabel, { color: tab.name === 'my-course' ? '#3B82F6' : '#6B7280' }]}>
                 {tab.title}
               </Text>
             </TouchableOpacity>
@@ -506,45 +404,10 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
     );
   }
 
-  const attendanceStats = calculateAttendanceStats();
   const overallGrade = studentEnrollment?.finalGrade || 
-    (studentEnrollment?.grade && studentEnrollment.grade.length > 0 
+    (studentEnrollment?.grade?.length 
       ? studentEnrollment.grade.reduce((sum, g) => sum + (g.score * g.weight), 0) 
       : 0);
-
-  // Format overall grade for display
-  const formatOverallGrade = (grade: number) => {
-    if (grade === 0) return 'N/A';
-    return grade.toFixed(1);
-  };
-
-  // Get status color based on enrollment status
-  const getStatusColor = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case 'PASSED':
-        return '#22C55E'; // Green
-      case 'NOT PASSED':
-        return '#EF4444'; // Red
-      case 'IN PROGRESS':
-        return '#F59E0B'; // Orange/Amber
-      default:
-        return '#6B7280'; // Gray
-    }
-  };
-
-  // Get status icon based on enrollment status
-  const getStatusIcon = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case 'PASSED':
-        return 'checkmark-circle-outline';
-      case 'NOT PASSED':
-        return 'close-circle-outline';
-      case 'IN PROGRESS':
-        return 'time-outline';
-      default:
-        return 'help-circle-outline';
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -611,16 +474,15 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
             {renderGradeBars()}
           </View>
 
-          {/* Success Footer */}
-          <View style={styles.successFooter}>
+          {/* Success Footer - Dynamic color based on grade */}
+          <View style={[styles.successFooter, { backgroundColor: gradeHelpers.getCardColor(overallGrade) }]}>
             <View style={styles.successContent}>
-              <Text style={styles.successText}>
-                {overallGrade === 0 ? 'No grades recorded yet' :
-                 overallGrade >= 8 ? 'Well done! Your grades are amazing!' : 
-                 overallGrade >= 6 ? 'Good job! Keep up the good work!' : 
-                 'Keep working hard to improve your grades!'}
+              <Text style={[styles.successText, { color: gradeHelpers.getTextColor(overallGrade) }]}>
+                {gradeHelpers.getMessage(overallGrade)}
               </Text>
-              <Text style={styles.overallScore}>{formatOverallGrade(overallGrade)}</Text>
+              <Text style={[styles.overallScore, { color: gradeHelpers.getTextColor(overallGrade) }]}>
+                {gradeHelpers.format(overallGrade)}
+              </Text>
             </View>
             {renderSuccessChart()}
           </View>
@@ -630,57 +492,23 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Course Details</Text>
           <View style={styles.detailsCard}>
-            <View style={styles.detailRow}>
-              <Ionicons name="book-outline" size={20} color="#6B7280" />
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Subject</Text>
-                <Text style={styles.detailValue}>
-                  {course?.subjectId?.subjectName || 'N/A'}
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.detailRow}>
-              <Ionicons name="code-outline" size={20} color="#6B7280" />
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Course Code</Text>
-                <Text style={styles.detailValue}>
-                  {course?.subjectId?.subjectCode || 'N/A'}
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.detailRow}>
-              <Ionicons name="calendar-outline" size={20} color="#6B7280" />
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Semester</Text>
-                <Text style={styles.detailValue}>
-                  {course?.semesterId?.semesterName || 'N/A'}
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.detailRow}>
-              <Ionicons name="stats-chart-outline" size={20} color="#6B7280" />
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Attendance</Text>
-                <Text style={styles.detailValue}>
-                  {attendanceStats.presentCount}/{attendanceStats.totalSessions} sessions attended ({attendanceStats.attendanceRate}%)
-                </Text>
-              </View>
-            </View>
-            
-            {enrollment && (
-              <View style={styles.detailRow}>
-                <Ionicons name={getStatusIcon(enrollment.status)} size={20} color={getStatusColor(enrollment.status)} />
+            {[
+              { icon: 'book-outline', label: 'Subject', value: course?.subjectId?.subjectName || 'N/A' },
+              { icon: 'code-outline', label: 'Course Code', value: course?.subjectId?.subjectCode || 'N/A' },
+              { icon: 'calendar-outline', label: 'Semester', value: course?.semesterId?.semesterName || 'N/A' },
+              { icon: 'stats-chart-outline', label: 'Attendance', value: `${attendanceStats.presentCount}/${attendanceStats.totalSessions} sessions attended (${attendanceStats.attendanceRate}%)` },
+              ...(enrollment ? [{ icon: getStatusInfo(enrollment.status).icon, label: 'Status', value: enrollment.status, color: getStatusInfo(enrollment.status).color }] : [])
+            ].map((detail, index) => (
+              <View key={index} style={styles.detailRow}>
+                <Ionicons name={detail.icon as any} size={20} color={detail.color || "#6B7280"} />
                 <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Status</Text>
-                  <Text style={[styles.detailValue, { color: getStatusColor(enrollment.status) }]}>
-                    {enrollment.status}
+                  <Text style={styles.detailLabel}>{detail.label}</Text>
+                  <Text style={[styles.detailValue, { color: detail.color || '#1F2937' }]}>
+                    {detail.value}
                   </Text>
                 </View>
               </View>
-            )}
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -740,42 +568,6 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 1,
-  },
-  headerContainer: {
-    marginHorizontal: 8,
-    marginTop: 8,
-  },
-  header: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 30,
-    paddingHorizontal: 28,
-    paddingVertical: 16,
-    overflow: 'hidden',
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  greeting: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '400',
-    flex: 1, 
-    marginRight: 16,
-  },
-  avatarContainer: {
-    width: 60, 
-    height: 60,
-    borderRadius: 30, 
-    overflow: 'hidden',
-    borderWidth: 2, // Add border for better definition
-    borderColor: '#FFFFFF',
-  },
-  avatar: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
   },
   scrollView: {
     flex: 1,
@@ -1005,8 +797,9 @@ const styles = StyleSheet.create({
     color: '#166534',
   },
   successChartContainer: {
-    height: 80,
+    height: 180, // Increased height to accommodate labels and prevent overflow
     overflow: 'hidden',
+    paddingTop: 10,
   },
   section: {
     marginBottom: 24,
@@ -1198,5 +991,34 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '500',
+  },
+  gradeLabelsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 40,
+    marginTop: 16, // Increased margin for better spacing
+  },
+  gradeLabelItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  gradeChartLabel: {
+    fontSize: 12,
+    color: '#374151',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  gradeChartScore: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 4, // Increased margin for better spacing
+  },
+  noGradeChartText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 30,
   },
 });
