@@ -15,23 +15,29 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { CourseData, getCourseById } from '../apis/courses.api';
 import { Enrollment, getStudentEnrollments } from '../apis/enrollments.api';
+import { 
+  getStudentEnrollmentById, 
+  getStudentAttendances, 
+  StudyProgress, 
+  AttendanceRecord,
+  StudentEnrollment 
+} from '../apis/students.api';
 import { useAuthStore } from '../stores/useAuthStore';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-const uiDesign = require("../assets/images/uiDesign.png");
-const uxDesign = require("../assets/images/uxDesign.png");
-const webDesign = require("../assets/images/webDesign.png");
-const wireframe = require("../assets/images/wireframe.png");
-
 interface CourseInfoProps {}
 
 const CourseInfo: React.FC<CourseInfoProps> = () => {
-  const { courseId } = useLocalSearchParams<{ courseId: string }>();
+  const { courseId, enrollmentId } = useLocalSearchParams<{ courseId: string; enrollmentId?: string }>();
   const [course, setCourse] = useState<CourseData | null>(null);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
+  const [studentEnrollment, setStudentEnrollment] = useState<StudentEnrollment | null>(null);
+  const [studyProgress, setStudyProgress] = useState<StudyProgress | null>(null);
+  const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuthStore();
@@ -47,13 +53,14 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
           return;
         }
 
+        if (!user?._id) {
+          setError('User not authenticated.');
+          return;
+        }
+
         // Fetch course details
         const courseResponse = await getCourseById(courseId);
-        console.log('Course API Response:', courseResponse); // Debug log
-        
-        // Handle different response structures
         const courseData = courseResponse.data || courseResponse;
-        console.log('Course Data:', courseData); // Debug log
         
         if (!courseData) {
           setError('Course data not found.');
@@ -62,19 +69,65 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
         
         setCourse(courseData);
 
-        // Check if user is enrolled in this course
-        if (user?._id) {
-          try {
-            const enrollmentsResponse = await getStudentEnrollments(user._id);
-            const userEnrollment = enrollmentsResponse.data.find(
-              (enr) => enr.courseId?._id === courseId
-            );
-            setEnrollment(userEnrollment || null);
-          } catch (enrollmentError) {
-            console.error('Error fetching enrollment:', enrollmentError);
-            setEnrollment(null);
-          }
+        // Find user's enrollment for this course
+        const enrollmentsResponse = await getStudentEnrollments(user._id);
+        console.log('Enrollments:', enrollmentsResponse.data);
+        console.log('Course ID:', user._id);
+        const userEnrollment = enrollmentsResponse.data.find(
+          (enr) => enr.courseId?._id === courseId
+        );
+
+        if (!userEnrollment) {
+          setError('You are not enrolled in this course.');
+          return;
         }
+
+        setEnrollment(userEnrollment);
+
+        // Fetch detailed student enrollment data
+        try {
+          const studentEnrollmentResponse = await getStudentEnrollmentById(user._id, userEnrollment._id);
+          setStudentEnrollment(studentEnrollmentResponse.data);
+        } catch (studentEnrollmentError) {
+          console.error('Error fetching student enrollment details:', studentEnrollmentError);
+          // Continue even if this fails
+        }
+
+        // // Fetch study progress
+        // try {
+        //   const progressResponse = await getStudyProgress(user._id, userEnrollment._id);
+        //   setStudyProgress(progressResponse.data);
+        // } catch (progressError) {
+        //   console.error('Error fetching study progress:', progressError);
+        //   // Set default values if API call fails
+        //   setStudyProgress({
+        //     enrollmentId: userEnrollment._id,
+        //     totalSessions: 20,
+        //     attendedSessions: 17,
+        //     attendanceRate: 87,
+        //     presentCount: 15,
+        //     absentCount: 3,
+        //     lateCount: 2,
+        //     overallGrade: 8.5,
+        //     grades: [
+        //       { type: 'Project', weight: 0.2, score: 4.5 },
+        //       { type: 'PE', weight: 0.3, score: 8.5 },
+        //       { type: 'PT', weight: 0.2, score: 6.0 },
+        //       { type: 'FE', weight: 0.3, score: 7.5 },
+        //     ],
+        //     status: 'IN PROGRESS'
+        //   });
+        // }
+
+        // Fetch attendance records
+        try {
+          const attendanceResponse = await getStudentAttendances(user._id, userEnrollment._id);
+          setAttendances(attendanceResponse.data);
+        } catch (attendanceError) {
+          console.error('Error fetching attendance records:', attendanceError);
+          // Continue even if this fails
+        }
+
       } catch (error) {
         console.error('Error fetching course details:', error);
         setError('Failed to load course details. Please try again.');
@@ -86,94 +139,190 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
     fetchCourseDetails();
   }, [courseId, user?._id]);
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  const getCourseImage = () => {
-    const images = [uiDesign, uxDesign, webDesign, wireframe];
-    const randomIndex = Math.floor(Math.random() * images.length);
-    return images[randomIndex];
-  };
-
-  const calculateOverallScore = (grades: Enrollment['grade']) => {
-    if (!grades || grades.length === 0) return 0;
-    
-    const totalWeightedScore = grades.reduce((sum, grade) => {
-      return sum + (grade.score * grade.weight);
-    }, 0);
-    
-    const totalWeight = grades.reduce((sum, grade) => sum + grade.weight, 0);
-    
-    return totalWeight > 0 ? totalWeightedScore / totalWeight : 0;
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score >= 8) return '#4CAF50';
-    if (score >= 6) return '#FF9800';
-    if (score >= 4) return '#FFC107';
-    return '#F44336';
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'PASSED':
-        return { bg: '#E8F5E8', text: '#4CAF50' };
-      case 'IN PROGRESS':
-        return { bg: '#FFF3E0', text: '#FF9800' };
-      case 'NOT PASSED':
-        return { bg: '#FFEBEE', text: '#F44336' };
-      default:
-        return { bg: '#F5F5F5', text: '#666' };
+  // Calculate attendance statistics from actual attendance records
+  const calculateAttendanceStats = () => {
+    if (!attendances || attendances.length === 0) {
+      return {
+        totalSessions: studyProgress?.totalSessions || 20,
+        presentCount: studyProgress?.presentCount || 15,
+        absentCount: studyProgress?.absentCount || 3,
+        lateCount: studyProgress?.lateCount || 2,
+        attendanceRate: studyProgress?.attendanceRate || 87
+      };
     }
+
+    const presentCount = attendances.filter(att => att.status === 'Present').length;
+    const absentCount = attendances.filter(att => att.status === 'Absent').length;
+    const lateCount = attendances.filter(att => att.status === 'Late').length;
+    const totalSessions = attendances.length;
+    const attendanceRate = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
+
+    return {
+      totalSessions,
+      presentCount,
+      absentCount,
+      lateCount,
+      attendanceRate
+    };
   };
 
-  const renderScoreCircle = (score: number, color: string) => {
-    const percentage = Math.min(score / 10, 1);
+  // Render circular progress indicator with multi-layer design
+  const renderCircularProgress = (percentage: number, size: number = 170) => {
+    const centerX = 93;
+    const centerY = 93;
+    const radius1 = 85;
+    const radius2 = 69;
+    const radius3 = 53;
     
+    const circumference1 = 2 * Math.PI * radius1;
+    const circumference2 = 2 * Math.PI * radius2;
+    const circumference3 = 2 * Math.PI * radius3;
+    
+    const attendanceStats = calculateAttendanceStats();
+    
+    // Calculate stroke dash arrays and offsets for each layer
+    const presentStroke = (attendanceStats.presentCount / attendanceStats.totalSessions) * circumference1;
+    const absentStroke = (attendanceStats.absentCount / attendanceStats.totalSessions) * circumference2;
+    const futureStroke = (attendanceStats.lateCount / attendanceStats.totalSessions) * circumference3;
+
     return (
       <View style={styles.progressContainer}>
-        <View style={styles.progressCircle}>
-          <View style={[styles.progressBackground, { borderColor: '#E0E0E0' }]} />
-          <View
-            style={[
-              styles.progressForeground,
-              {
-                borderColor: color,
-                transform: [{ rotate: `${percentage * 360}deg` }]
-              }
-            ]}
-          />
-          <View style={styles.progressInner}>
-            <Text style={styles.progressText}>{score.toFixed(1)}</Text>
+        <View style={[styles.progressWrapper, { width: size, height: size }]}>
+          <Svg width={size} height={size} viewBox="0 0 186 186">
+            {/* Background circle */}
+            <Circle
+              cx={centerX}
+              cy={centerY}
+              r={radius1}
+              fill="none"
+              stroke="#F3F4F6"
+              strokeWidth="16"
+              strokeLinecap="round"
+            />
+            {/* Present (dark blue) - largest segment */}
+            <Circle
+              cx={centerX}
+              cy={centerY}
+              r={radius1}
+              fill="none"
+              stroke="#03045E"
+              strokeWidth="16"
+              strokeLinecap="round"
+              strokeDasharray={`${presentStroke} ${circumference1}`}
+              strokeDashoffset={circumference1 / 4}
+              transform={`rotate(-90 ${centerX} ${centerY})`}
+            />
+            {/* Absent (medium blue) */}
+            <Circle
+              cx={centerX}
+              cy={centerY}
+              r={radius2}
+              fill="none"
+              stroke="#0077B6"
+              strokeWidth="16"
+              strokeLinecap="round"
+              strokeDasharray={`${absentStroke} ${circumference2}`}
+              strokeDashoffset={circumference2 / 4}
+              transform={`rotate(-90 ${centerX} ${centerY})`}
+            />
+            {/* Future (light blue) */}
+            <Circle
+              cx={centerX}
+              cy={centerY}
+              r={radius3}
+              fill="none"
+              stroke="#00B4D8"
+              strokeWidth="16"
+              strokeLinecap="round"
+              strokeDasharray={`${futureStroke} ${circumference3}`}
+              strokeDashoffset={circumference3 / 4}
+              transform={`rotate(-90 ${centerX} ${centerY})`}
+            />
+          </Svg>
+          {/* Center percentage */}
+          <View style={styles.progressCenter}>
+            <Text style={styles.progressPercentage}>{Math.round(percentage)}%</Text>
+          </View>
+        </View>
+        
+        {/* Side numbers */}
+        <View style={styles.sideNumbers}>
+          <View style={[styles.sideNumber, { backgroundColor: '#03045E' }]}>
+            <Text style={styles.sideNumberText}>{attendanceStats.presentCount}</Text>
+          </View>
+          <View style={[styles.sideNumber, { backgroundColor: '#0077B6' }]}>
+            <Text style={styles.sideNumberText}>{attendanceStats.absentCount}</Text>
+          </View>
+          <View style={[styles.sideNumber, { backgroundColor: '#00B4D8' }]}>
+            <Text style={styles.sideNumberText}>{attendanceStats.lateCount}</Text>
           </View>
         </View>
       </View>
     );
   };
 
-  const renderGradeCard = (grade: Enrollment['grade'][0], index: number) => {
-    const color = getScoreColor(grade.score);
-    
+  // Render grade bars with actual data
+  const renderGradeBars = () => {
+    // Use grades from studyProgress if available, otherwise use studentEnrollment grades
+    const grades = studyProgress?.grades || studentEnrollment?.grade || [
+      { type: 'Project', score: 4.5, weight: 0.2 },
+      { type: 'PE', score: 8.5, weight: 0.3 },
+      { type: 'PT', score: 6.0, weight: 0.2 },
+      { type: 'FE', score: 7.5, weight: 0.3 },
+    ];
+
+    const maxScore = 10;
+
     return (
-      <View style={styles.gradeCard}>
-        <View style={styles.gradeHeader}>
-          <Text style={styles.gradeType}>{grade.type}</Text>
-          <View style={[styles.scoreContainer, { backgroundColor: color + '20' }]}>
-            <Text style={[styles.scoreText, { color }]}>{grade.score}</Text>
+      <View style={styles.gradeContainer}>
+        {grades.map((grade, index) => (
+          <View key={index} style={styles.gradeItem}>
+            <View style={styles.gradeBarContainer}>
+              <View 
+                style={[
+                  styles.gradeBar, 
+                  { 
+                    height: `${(grade.score / maxScore) * 100}%`,
+                    backgroundColor: grade.score >= 8 ? '#4DAF00' : grade.score >= 6 ? '#FFA500' : '#E5E7EB'
+                  }
+                ]} 
+              />
+            </View>
+            <Text style={styles.gradeLabel}>{grade.type}</Text>
           </View>
-        </View>
-        <View style={styles.gradeInfo}>
-          <Text style={styles.weightText}>Weight: {grade.weight}%</Text>
-          <Text style={styles.contributionText}>
-            Contribution: {((grade.score * grade.weight) / 100).toFixed(1)}
-          </Text>
-        </View>
+        ))}
+      </View>
+    );
+  };
+
+  // Render success chart with wave pattern
+  const renderSuccessChart = () => {
+    return (
+      <View style={styles.successChartContainer}>
+        <Svg width="100%" height={96} viewBox="0 0 392 96" preserveAspectRatio="none">
+          <Defs>
+            <LinearGradient id="successGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <Stop offset="0%" stopColor="#4DAF00" stopOpacity="0.38" />
+              <Stop offset="100%" stopColor="white" stopOpacity="0" />
+            </LinearGradient>
+          </Defs>
+          
+          {/* Area fill */}
+          <Path
+            d="M0 80 Q50 60 100 65 T200 55 T300 45 T392 35 L392 96 L0 96 Z"
+            fill="url(#successGradient)"
+          />
+          
+          {/* Line */}
+          <Path
+            d="M0 80 Q50 60 100 65 T200 55 T300 45 T392 35"
+            stroke="#52AC0B"
+            strokeWidth="3"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
       </View>
     );
   };
@@ -181,22 +330,22 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" hidden={true} />
+        <StatusBar barStyle="light-content" backgroundColor="#3B82F6" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2B3A67" />
+          <ActivityIndicator size="large" color="#3B82F6" />
           <Text style={styles.loadingText}>Loading course details...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (error || !course) {
+  if (error) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" hidden={true} />
+        <StatusBar barStyle="light-content" backgroundColor="#3B82F6" />
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={64} color="#F44336" />
-          <Text style={styles.errorText}>{error || 'Course not found'}</Text>
+          <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+          <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
             <Text style={styles.retryText}>Go Back</Text>
           </TouchableOpacity>
@@ -205,24 +354,41 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
     );
   }
 
-  const isEnrolled = enrollment !== null;
-  const overallScore = isEnrolled ? calculateOverallScore(enrollment.grade) : 0;
-  const statusColors = isEnrolled ? getStatusColor(enrollment.status) : { bg: '#F5F5F5', text: '#666' };
+  const attendanceStats = calculateAttendanceStats();
+  const overallGrade = studyProgress?.overallGrade || studentEnrollment?.finalGrade || 8.5;
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" hidden={true} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      
+      {/* Status Bar */}
+      <View style={styles.statusBar}>
+        <Text style={styles.timeText}>09:41</Text>
+        <View style={styles.statusIcons}>
+          <Ionicons name="cellular" size={16} color="#000" />
+          <Ionicons name="wifi" size={16} color="#000" />
+          <View style={styles.batteryIcon}>
+            <View style={styles.batteryBody} />
+            <View style={styles.batteryTip} />
+          </View>
+        </View>
+      </View>
       
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#2B3A67" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Course Information</Text>
-        <View style={styles.headerRight} />
+      <View style={styles.headerContainer}>
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Text style={styles.greeting}>
+              Hi, {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : 'Nguyễn Quốc Huy'}
+            </Text>
+            <View style={styles.avatarContainer}>
+              <Image
+                source={user?.image ? { uri: user.image } : require('../assets/images/avatar.png')}
+                style={styles.avatar}
+              />
+            </View>
+          </View>
+        </View>
       </View>
 
       <ScrollView
@@ -230,174 +396,118 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Course Image & Hero Section */}
-        <View style={styles.heroSection}>
-          <Image
-            source={getCourseImage()}
-            style={styles.courseImage}
-            resizeMode="cover"
-          />
-          
-          <View style={styles.heroOverlay}>
-            <Text style={styles.courseTitle}>
-              {course.subjectId?.subjectName || 'Unknown Course'}
-            </Text>
-            <Text style={styles.courseCode}>
-              {course.subjectId?.subjectCode}
-            </Text>
-            {isEnrolled && (
-              <View style={styles.enrolledIndicator}>
-                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-                <Text style={styles.enrolledText}>Enrolled</Text>
-              </View>
-            )}
+        {/* Main Title */}
+        <View style={styles.titleContainer}>
+          <Text style={styles.mainTitle}>Your Study Progress</Text>
+        </View>
+
+        {/* Progress Chart Section */}
+        <View style={styles.progressSection}>
+          {renderCircularProgress(attendanceStats.attendanceRate, 170)}
+        </View>
+
+        {/* Legend */}
+        <View style={styles.legendContainer}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#03045E' }]} />
+            <Text style={styles.legendText}>Present</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#0077B6' }]} />
+            <Text style={styles.legendText}>Absent</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#00B4D8' }]} />
+            <Text style={styles.legendText}>Late</Text>
           </View>
         </View>
 
-        {/* Course Info Cards */}
-        <View style={styles.infoSection}>
-          {/* Enrollment Status Card (if enrolled) */}
-          {isEnrolled && (
-            <View style={styles.infoCard}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>Your Progress</Text>
-                <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
-                  <Text style={[styles.statusText, { color: statusColors.text }]}>
+        {/* Mark Report Card */}
+        <View style={styles.markReportCard}>
+          {/* Card Header */}
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderTitle}>
+              <Ionicons name="bar-chart-outline" size={20} color="#000" />
+              <Text style={styles.cardTitle}>Mark Report</Text>
+            </View>
+            <Text style={styles.cardSubtitle}>Component grade of the course</Text>
+          </View>
+
+          {/* Chart Body */}
+          <View style={styles.chartBody}>
+            {renderGradeBars()}
+          </View>
+
+          {/* Success Footer */}
+          <View style={styles.successFooter}>
+            <View style={styles.successContent}>
+              <Text style={styles.successText}>
+                {overallGrade >= 8 ? 'Well done! Your grades are amazing!' : 
+                 overallGrade >= 6 ? 'Good job! Keep up the good work!' : 
+                 'Keep working hard to improve your grades!'}
+              </Text>
+              <Text style={styles.overallScore}>{overallGrade}</Text>
+            </View>
+            {renderSuccessChart()}
+          </View>
+        </View>
+
+        {/* Course Details Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Course Details</Text>
+          <View style={styles.detailsCard}>
+            <View style={styles.detailRow}>
+              <Ionicons name="book-outline" size={20} color="#6B7280" />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Subject</Text>
+                <Text style={styles.detailValue}>
+                  {course?.subjectId?.subjectName || 'N/A'}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.detailRow}>
+              <Ionicons name="code-outline" size={20} color="#6B7280" />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Course Code</Text>
+                <Text style={styles.detailValue}>
+                  {course?.subjectId?.subjectCode || 'N/A'}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.detailRow}>
+              <Ionicons name="calendar-outline" size={20} color="#6B7280" />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Semester</Text>
+                <Text style={styles.detailValue}>
+                  {course?.semesterId?.semesterName || 'N/A'}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.detailRow}>
+              <Ionicons name="stats-chart-outline" size={20} color="#6B7280" />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Attendance</Text>
+                <Text style={styles.detailValue}>
+                  {attendanceStats.presentCount}/{attendanceStats.totalSessions} sessions ({attendanceStats.attendanceRate}%)
+                </Text>
+              </View>
+            </View>
+            
+            {enrollment && (
+              <View style={styles.detailRow}>
+                <Ionicons name="checkmark-circle-outline" size={20} color="#22C55E" />
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailLabel}>Status</Text>
+                  <Text style={[styles.detailValue, { color: '#22C55E' }]}>
                     {enrollment.status}
                   </Text>
                 </View>
               </View>
-              
-              <View style={styles.progressSection}>
-                <View style={styles.progressInfo}>
-                  <Text style={styles.progressLabel}>Overall Score</Text>
-                  <Text style={styles.progressValue}>{overallScore.toFixed(1)}/10</Text>
-                </View>
-                {renderScoreCircle(overallScore, getScoreColor(overallScore))}
-              </View>
-            </View>
-          )}
-
-          {/* Course Details Card */}
-          <View style={styles.infoCard}>
-            <Text style={styles.cardTitle}>Course Details</Text>
-            
-            <View style={styles.detailRow}>
-              <Ionicons name="book-outline" size={20} color="#666" />
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Subject Code</Text>
-                <Text style={styles.detailValue}>
-                  {course.subjectId?.subjectCode || 'N/A'}
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.detailRow}>
-              <Ionicons name="calendar-outline" size={20} color="#666" />
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Semester</Text>
-                <Text style={styles.detailValue}>
-                  {course.semesterId?.semesterName || 'N/A'}
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.detailRow}>
-              <Ionicons name="time-outline" size={20} color="#666" />
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Duration</Text>
-                <Text style={styles.detailValue}>
-                  {formatDate(course.semesterId?.startDate)} - {formatDate(course.semesterId?.endDate)}
-                </Text>
-              </View>
-            </View>
-            
-            {isEnrolled && (
-              <View style={styles.detailRow}>
-                <Ionicons name="person-outline" size={20} color="#666" />
-                <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Enrolled Date</Text>
-                  <Text style={styles.detailValue}>
-                    {formatDate(enrollment.enrollmentDate)}
-                  </Text>
-                </View>
-              </View>
             )}
           </View>
-
-          {/* Grades Card (if enrolled) */}
-          {isEnrolled && (
-            <View style={styles.infoCard}>
-              <Text style={styles.cardTitle}>Grade Breakdown</Text>
-              {enrollment.grade && enrollment.grade.length > 0 ? (
-                <View style={styles.gradesContainer}>
-                  {enrollment.grade.map((grade, index) => (
-                    <View key={index}>
-                      {renderGradeCard(grade, index)}
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <View style={styles.noGradesContainer}>
-                  <Ionicons name="document-outline" size={48} color="#ccc" />
-                  <Text style={styles.noGradesText}>No grades available yet</Text>
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.actionSection}>
-          {isEnrolled ? (
-            <>
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={() => {
-                  router.push({
-                    pathname: "/course-info",
-                    params: { enrollmentId: enrollment._id }
-                  });
-                }}
-              >
-                <Ionicons name="book-outline" size={20} color="#fff" />
-                <Text style={styles.primaryButtonText}>View Full Details</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={() => {
-                  // Navigate to course materials
-                }}
-              >
-                <Ionicons name="document-text-outline" size={20} color="#2B3A67" />
-                <Text style={styles.secondaryButtonText}>Materials</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={() => {
-                  // Handle enrollment logic
-                  // You can add enrollment API call here
-                }}
-              >
-                <Ionicons name="add-circle-outline" size={20} color="#fff" />
-                <Text style={styles.primaryButtonText}>Enroll Now</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={() => {
-                  // Navigate to course preview
-                }}
-              >
-                <Ionicons name="eye-outline" size={20} color="#2B3A67" />
-                <Text style={styles.secondaryButtonText}>Preview</Text>
-              </TouchableOpacity>
-            </>
-          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -409,29 +519,83 @@ export default CourseInfo;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
   },
-  header: {
+  statusBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 16 : 24,
-    paddingBottom: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingHorizontal: 36,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
   },
-  backButton: {
-    padding: 8,
+  timeText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000000',
   },
-  headerTitle: {
+  statusIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  batteryIcon: {
+    position: 'relative',
+    width: 24,
+    height: 12,
+  },
+  batteryBody: {
+    width: 20,
+    height: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 2,
+    backgroundColor: '#000000',
+  },
+  batteryTip: {
+    position: 'absolute',
+    right: -2,
+    top: 4,
+    width: 2,
+    height: 4,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 1,
+  },
+  headerContainer: {
+    marginHorizontal: 8,
+    marginTop: 8,
+  },
+  header: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 30,
+    paddingHorizontal: 28,
+    paddingVertical: 16,
+    overflow: 'hidden', // Add this to prevent avatar overflow
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  greeting: {
+    color: '#FFFFFF',
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2B3A67',
+    fontWeight: '400',
+    flex: 1, 
+    marginRight: 16,
   },
-  headerRight: {
-    width: 40,
+  avatarContainer: {
+    width: 60, 
+    height: 60,
+    borderRadius: 30, 
+    overflow: 'hidden',
+    borderWidth: 2, // Add border for better definition
+    borderColor: '#FFFFFF',
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   scrollView: {
     flex: 1,
@@ -439,143 +603,202 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
   },
-  heroSection: {
+  titleContainer: {
+    paddingHorizontal: 20,
+    marginTop: 24,
+  },
+  mainTitle: {
+    fontSize: 40,
+    fontWeight: '500',
+    color: '#000000',
+    lineHeight: 48,
+  },
+  progressSection: {
+    paddingHorizontal: 20,
+    marginTop: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
     position: 'relative',
-    marginBottom: 20,
+    minHeight: 200, // Add minimum height to prevent overflow
   },
-  courseImage: {
-    width: '100%',
-    height: screenHeight * 0.25,
-    backgroundColor: '#f0f0f0',
+  progressContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%', // Ensure full width
+    maxWidth: screenWidth - 40, // Prevent overflow
   },
-  heroOverlay: {
+  progressWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressCenter: {
     position: 'absolute',
-    bottom: 0,
+    top: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    padding: 20,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  courseTitle: {
+  progressPercentage: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 4,
+    color: '#000000',
   },
-  courseCode: {
-    fontSize: 16,
-    color: '#E0E0E0',
-    marginBottom: 8,
+  sideNumbers: {
+    position: 'absolute',
+    right: -10, // Adjusted position
+    top: '50%',
+    transform: [{ translateY: -50 }],
+    gap: 12,
   },
-  enrolledIndicator: {
+  sideNumber: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 4,
+    minWidth: 33,
+    alignItems: 'center',
+  },
+  sideNumberText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  legendContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 24,
+    paddingHorizontal: 20,
+    marginTop: 24,
+  },
+  legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(76, 175, 80, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 16,
-    alignSelf: 'flex-start',
+    gap: 8,
   },
-  enrolledText: {
-    color: '#4CAF50',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
+  legendDot: {
+    width: 28,
+    height: 12,
+    borderRadius: 6,
   },
-  infoSection: {
-    paddingHorizontal: 20,
+  legendText: {
+    fontSize: 14,
+    color: '#000000',
   },
-  infoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+  markReportCard: {
+    marginHorizontal: 4,
+    marginTop: 32,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
+    overflow: 'hidden',
   },
   cardHeader: {
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+  },
+  cardHeaderTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  cardTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+    lineHeight: 20,
+  },
+  chartBody: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  gradeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    height: 160,
+    marginBottom: 12,
+    gap: 24,
+  },
+  gradeItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 8,
+  },
+  gradeBarContainer: {
+    width: 40,
+    height: 160,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  gradeBar: {
+    width: '100%',
+    borderRadius: 8,
+    minHeight: 40,
+  },
+  gradeLabel: {
+    fontSize: 12,
+    color: '#000000',
+  },
+  successFooter: {
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+  },
+  successContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2B3A67',
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  progressSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  progressInfo: {
-    flex: 1,
-  },
-  progressLabel: {
+  successText: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+    color: '#166534',
+    fontWeight: '500',
   },
-  progressValue: {
-    fontSize: 28,
+  overallScore: {
+    fontSize: 24,
+    fontWeight: '500',
+    color: '#166534',
+  },
+  successChartContainer: {
+    height: 80,
+    overflow: 'hidden',
+  },
+  section: {
+    marginBottom: 24,
+    paddingHorizontal: 20,
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#2B3A67',
+    color: '#1F2937',
+    marginBottom: 16,
   },
-  progressContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressCircle: {
-    width: 80,
-    height: 80,
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressBackground: {
-    position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 6,
-    borderColor: '#E0E0E0',
-  },
-  progressForeground: {
-    position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 6,
-    borderTopColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: 'transparent',
-  },
-  progressInner: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#fff',
-  },
-  progressText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2B3A67',
+  detailsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   detailRow: {
     flexDirection: 'row',
@@ -588,112 +811,23 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#6B7280',
     marginBottom: 2,
   },
   detailValue: {
     fontSize: 16,
-    color: '#2B3A67',
+    color: '#1F2937',
     fontWeight: '500',
-  },
-  gradesContainer: {
-    gap: 12,
-  },
-  gradeCard: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#2B3A67',
-  },
-  gradeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  gradeType: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2B3A67',
-  },
-  scoreContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  scoreText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  gradeInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  weightText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  contributionText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  noGradesContainer: {
-    alignItems: 'center',
-    paddingVertical: 32,
-  },
-  noGradesText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 12,
-  },
-  actionSection: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  primaryButton: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#2B3A67',
-    paddingVertical: 16,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    paddingVertical: 16,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 2,
-    borderColor: '#2B3A67',
-  },
-  secondaryButtonText: {
-    color: '#2B3A67',
-    fontSize: 16,
-    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: '#6B7280',
   },
   errorContainer: {
     flex: 1,
@@ -703,19 +837,19 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#F44336',
+    color: '#EF4444',
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#2B3A67',
+    backgroundColor: '#3B82F6',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '500',
   },

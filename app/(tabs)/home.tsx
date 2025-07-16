@@ -359,7 +359,18 @@ const HomeScreen: React.FC = () => {
                   <Text style={styles.courseCardDesc} numberOfLines={1} ellipsizeMode="tail">
                     {enrollment.courseId?.semesterId?.semesterName || ""}
                   </Text>
-                  <TouchableOpacity style={styles.keepLearningBtn}>
+                  <TouchableOpacity 
+                    style={styles.keepLearningBtn}
+                    onPress={() => {
+                      router.push({
+                        pathname: "/course-info",
+                        params: {
+                          courseId: enrollment.courseId?._id,
+                          enrollmentId: enrollment._id
+                        }
+                      });
+                    }}
+                  >
                     <Text style={styles.keepLearningText}>Keep learning</Text>
                   </TouchableOpacity>
                 </View>
