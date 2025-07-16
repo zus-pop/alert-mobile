@@ -3,7 +3,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
-    Alert,
     Image,
     Platform,
     SafeAreaView,
@@ -11,8 +10,9 @@ import {
     StatusBar,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
+import { markNotificationAsRead } from "../apis/notifications.api";
 import myAxios from "../utils/my-axios";
 
 interface NotificationDetail {
@@ -80,6 +80,20 @@ const NotificationDetailScreen: React.FC = () => {
         }
     }, [notificationId]);
 
+    const markAsRead = async (notificationData: NotificationDetail) => {
+        try {
+            const requestData = {
+                isRead: "true"
+            };
+
+            await markNotificationAsRead(notificationId!, requestData);
+
+            console.log('Notification marked as read successfully');
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+        }
+    };
+
     const fetchNotificationDetail = async () => {
         try {
             setLoading(true);
@@ -91,6 +105,11 @@ const NotificationDetailScreen: React.FC = () => {
             // Try different response structures
             if (response.data) {
                 setNotification(response.data);
+
+                // Mark as read if it's not already read
+                if (!response.data.isRead) {
+                    await markAsRead(response.data);
+                }
             } else {
                 console.log('No data found in response');
             }
@@ -444,30 +463,6 @@ const NotificationDetailScreen: React.FC = () => {
                 </View>
             </ScrollView>
 
-            {/* Action Buttons */}
-            <View className="flex-row px-4 py-4 bg-white shadow-sm">
-                <TouchableOpacity
-                    className="flex-1 flex-row justify-center items-center py-3 bg-green-500 rounded-lg mx-2"
-                    onPress={() => {
-                        // Mark as read functionality
-                        Alert.alert('Info', 'Mark as read functionality to be implemented');
-                    }}
-                >
-                    <Ionicons name="checkmark" size={20} color="#fff" />
-                    <Text className="text-white text-base font-semibold ml-2">Mark as Read</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    className="flex-1 flex-row justify-center items-center py-3 bg-white border border-blue-500 rounded-lg mx-2"
-                    onPress={() => {
-                        // Share functionality
-                        Alert.alert('Info', 'Share functionality to be implemented');
-                    }}
-                >
-                    <Ionicons name="share" size={20} color="#007AFF" />
-                    <Text className="text-blue-500 text-base font-semibold ml-2">Share</Text>
-                </TouchableOpacity>
-            </View>
         </View>
     );
 };
