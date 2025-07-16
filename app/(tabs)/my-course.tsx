@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Platform, RefreshControl, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Enrollment, getStudentEnrollments } from '../../apis/enrollments.api';
@@ -253,8 +254,14 @@ const MyCourse: React.FC = () => {
                   <TouchableOpacity
                     style={styles.overviewButton}
                     onPress={() => {
-                      // Clear selected course when user interacts with the course
-                      clearSelectedCourse();
+                      // Navigate to course-info screen with courseId and enrollmentId
+                      router.push({
+                        pathname: "/course-info",
+                        params: {
+                          courseId: enrollment.courseId?._id,
+                          enrollmentId: enrollment._id
+                        }
+                      });
                     }}
                   >
                     <Text style={styles.overviewText}>View Courses</Text>

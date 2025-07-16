@@ -292,7 +292,20 @@ const HomeScreen: React.FC = () => {
                 {featuredCourses.map((course, index) => {
                   const progress = coursesProgress[course._id] || 0;
                   return (
-                    <View key={course._id} style={[styles.featuredCourse, index > 0 && styles.featuredCourseMargin]}>
+                    <TouchableOpacity
+                      key={course._id}
+                      style={[styles.featuredCourse, index > 0 && styles.featuredCourseMargin]}
+                      onPress={() => {
+                        router.push({
+                          pathname: "/course-info",
+                          params: {
+                            courseId: course.courseId?._id,
+                            enrollmentId: course._id
+                          }
+                        });
+                      }}
+                      activeOpacity={0.8}
+                    >
                       {course.courseId?.image ? (
                         <Image
                           source={{ uri: course.courseId.image }}
@@ -318,7 +331,7 @@ const HomeScreen: React.FC = () => {
                           <Text style={styles.progressText}>{progress}%</Text>
                         </View>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   );
                 })}
               </ScrollView>
@@ -337,9 +350,14 @@ const HomeScreen: React.FC = () => {
               <View key={enrollment._id} style={styles.courseCard}>
                 <TouchableOpacity
                   onPress={() => {
-                    setSelectedCourseId(enrollment._id);
-                    router.push("/(tabs)/my-course");
-                  }}
+                      router.push({
+                        pathname: "/course-info",
+                        params: {
+                          courseId: enrollment.courseId?._id,
+                          enrollmentId: enrollment._id
+                        }
+                      });
+                    }}
                   style={styles.courseImageContainer}
                 >
                   {enrollment.courseId?.image ? (
@@ -359,7 +377,18 @@ const HomeScreen: React.FC = () => {
                   <Text style={styles.courseCardDesc} numberOfLines={1} ellipsizeMode="tail">
                     {enrollment.courseId?.semesterId?.semesterName || ""}
                   </Text>
-                  <TouchableOpacity style={styles.keepLearningBtn}>
+                  <TouchableOpacity 
+                    style={styles.keepLearningBtn}
+                    onPress={() => {
+                      router.push({
+                        pathname: "/course-info",
+                        params: {
+                          courseId: enrollment.courseId?._id,
+                          enrollmentId: enrollment._id
+                        }
+                      });
+                    }}
+                  >
                     <Text style={styles.keepLearningText}>Keep learning</Text>
                   </TouchableOpacity>
                 </View>
