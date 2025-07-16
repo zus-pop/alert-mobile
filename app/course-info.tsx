@@ -47,8 +47,7 @@ const CourseInfo = () => {
     getCardColor: (grade: number) => ['#F3F4F6', '#FEF2F2', '#FEF3F2', '#FFFBEB', '#F0FDF4'][grade === 0 ? 0 : grade >= 8 ? 4 : grade >= 6 ? 3 : grade >= 5 ? 2 : 1],
     getTextColor: (grade: number) => ['#6B7280', '#DC2626', '#C2410C', '#92400E', '#166534'][grade === 0 ? 0 : grade >= 8 ? 4 : grade >= 6 ? 3 : grade >= 5 ? 2 : 1],
     getMessage: (grade: number) => ['No grades recorded yet', 'Work harder to raise your grades!', 'You\'re doing okay. Keep improving!', 'Good job! Keep up the good work!', 'Excellent! Your grades are outstanding!'][grade === 0 ? 0 : grade >= 8 ? 4 : grade >= 6 ? 3 : grade >= 5 ? 2 : 1],
-    format: (grade: number) => grade === 0 ? 'N/A' : grade.toFixed(1),
-    // truncate: (type: string) => type.length <= 8 ? type : type.substring(0, 6) + '..'
+    format: (grade: number) => grade === 0 ? 'N/A' : grade.toFixed(1)
   };
 
   const statusMap: Record<string, { color: string; icon: string }> = {
@@ -56,6 +55,10 @@ const CourseInfo = () => {
     'NOT PASSED': { color: '#EF4444', icon: 'close-circle-outline' },
     'IN PROGRESS': { color: '#F59E0B', icon: 'time-outline' }
   };
+
+  const attendanceColors = ['#03045E', '#0077B6', '#90E0EF'];
+  const attendanceLabels = ['Attended', 'Absent', 'Not Yet'];
+  
   const getStatusInfo = (status: string) => statusMap[status?.toUpperCase()] || { color: '#6B7280', icon: 'help-circle-outline' };
 
   useEffect(() => {
@@ -142,112 +145,58 @@ const CourseInfo = () => {
     const radius = size / 2 - 20;
     const strokeWidth = 16;
     
-    // Calculate angles for each segment
     const total = attendanceStats.totalSessions;
-    const presentPercentage = total > 0 ? (attendanceStats.presentCount / total) : 0;
-    const absentPercentage = total > 0 ? (attendanceStats.absentCount / total) : 0;
-    const notYetPercentage = total > 0 ? (attendanceStats.notYetCount / total) : 0;
+    const percentages = total > 0 ? [
+      attendanceStats.presentCount / total,
+      attendanceStats.absentCount / total,
+      attendanceStats.notYetCount / total
+    ] : [0, 0, 0];
     
-    // Convert to angles (360 degrees total)
-    const gapAngle = 4; // Small gap between segments
-    const totalGaps = 3 * gapAngle;
-    const availableAngle = 360 - totalGaps;
+    const gapAngle = 4;
+    const availableAngle = 360 - (3 * gapAngle);
+    const angles = percentages.map(p => p * availableAngle);
     
-    const presentAngle = presentPercentage * availableAngle;
-    const absentAngle = absentPercentage * availableAngle;
-    const notYetAngle = notYetPercentage * availableAngle;
-    
-    // Helper function to create arc path
     const createArcPath = (startAngle: number, endAngle: number, innerRadius: number, outerRadius: number) => {
       const start = startAngle * (Math.PI / 180);
       const end = endAngle * (Math.PI / 180);
-      
       const x1 = centerX + innerRadius * Math.cos(start);
       const y1 = centerY + innerRadius * Math.sin(start);
       const x2 = centerX + outerRadius * Math.cos(start);
       const y2 = centerY + outerRadius * Math.sin(start);
-      
       const x3 = centerX + outerRadius * Math.cos(end);
       const y3 = centerY + outerRadius * Math.sin(end);
       const x4 = centerX + innerRadius * Math.cos(end);
       const y4 = centerY + innerRadius * Math.sin(end);
-      
       const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
-      
       return `M ${x1} ${y1} L ${x2} ${y2} A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${x3} ${y3} L ${x4} ${y4} A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x1} ${y1}`;
     };
     
-    // Starting from top (-90 degrees)
     let currentAngle = -90;
     const innerRadius = radius - strokeWidth / 2;
     const outerRadius = radius + strokeWidth / 2;
-    
-    const segments = [
-      { 
-        angle: presentAngle, 
-        color: '#03045E', // Dark blue
-        count: attendanceStats.presentCount,
-        label: 'Attended'
-      },
-      { 
-        angle: absentAngle, 
-        color: '#0077B6', // Medium blue
-        count: attendanceStats.absentCount,
-        label: 'Absent'
-      },
-      { 
-        angle: notYetAngle, 
-        color: '#90E0EF', // Light blue
-        count: attendanceStats.notYetCount,
-        label: 'Not Yet'
-      }
-    ];
+    const counts = [attendanceStats.presentCount, attendanceStats.absentCount, attendanceStats.notYetCount];
 
     return (
       <View style={styles.progressContainer}>
         <View style={[styles.progressWrapper, { width: size, height: size }]}>
           <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-            {/* Background circle */}
-            <Circle 
-              cx={centerX} 
-              cy={centerY} 
-              r={radius} 
-              fill="none" 
-              stroke="#F3F4F6" 
-              strokeWidth={strokeWidth}
-              strokeLinecap="round"
-            />
-            
-            {/* Pie segments */}
-            {segments.map((segment, index) => {
-              if (segment.angle === 0) return null;
-              
-              const segmentPath = createArcPath(currentAngle, currentAngle + segment.angle, innerRadius, outerRadius);
-              const nextAngle = currentAngle + segment.angle + gapAngle;
-              
-              const result = (
-                <Path
-                  key={index}
-                  d={segmentPath}
-                  fill={segment.color}
-                  stroke="none"
-                />
-              );
-              
-              currentAngle = nextAngle;
+            <Circle cx={centerX} cy={centerY} r={radius} fill="none" stroke="#F3F4F6" strokeWidth={strokeWidth} strokeLinecap="round" />
+            {angles.map((angle, index) => {
+              if (angle === 0) return null;
+              const segmentPath = createArcPath(currentAngle, currentAngle + angle, innerRadius, outerRadius);
+              const result = <Path key={index} d={segmentPath} fill={attendanceColors[index]} stroke="none" />;
+              currentAngle += angle + gapAngle;
               return result;
             })}
           </Svg>
-          
           <View style={styles.progressCenter}>
             <Text style={styles.progressPercentage}>{Math.round(percentage)}%</Text>
           </View>
         </View>
-        
         <View style={styles.sideNumbers}>
-          {segments.map((segment, i) => (
-            <View key={i} style={[styles.sideNumber, { backgroundColor: segment.color }]}>
-              <Text style={styles.sideNumberText}>{segment.count}</Text>
+          {counts.map((count, i) => (
+            <View key={i} style={[styles.sideNumber, { backgroundColor: attendanceColors[i] }]}>
+              <Text style={styles.sideNumberText}>{count}</Text>
             </View>
           ))}
         </View>
@@ -427,62 +376,74 @@ const CourseInfo = () => {
     );
   };
 
-  // Render custom bottom tab bar
-  const renderBottomTabs = () => {
-    const tabItems = [
-      { name: 'home', title: 'Home', icon: 'house.fill', route: '/(tabs)/home' },
-      { name: 'chat', title: 'Chat', icon: 'chat.fill', route: '/(tabs)/chat' },
-      { name: 'my-course', title: 'My Course', icon: 'book.fill', route: '/(tabs)/my-course' },
-      { name: 'profile', title: 'My Profile', icon: 'person.fill', route: '/(tabs)/profile' }
-    ];
+  const tabItems = [
+    { name: 'home', title: 'Home', icon: 'house.fill', route: '/(tabs)/home' },
+    { name: 'chat', title: 'Chat', icon: 'chat.fill', route: '/(tabs)/chat' },
+    { name: 'my-course', title: 'My Course', icon: 'book.fill', route: '/(tabs)/my-course' },
+    { name: 'profile', title: 'My Profile', icon: 'person.fill', route: '/(tabs)/profile' }
+  ];
 
-    return (
-      <View style={styles.bottomTabContainer}>
-        <View style={styles.bottomTabBar}>
-          {tabItems.map((tab, index) => (
-            <TouchableOpacity key={index} style={styles.tabItem} onPress={() => router.push(tab.route as any)}>
-              <IconSymbol size={24} name={tab.icon as any} color={tab.name === 'my-course' ? '#3B82F6' : '#6B7280'} />
-              <Text style={[styles.tabLabel, { color: tab.name === 'my-course' ? '#3B82F6' : '#6B7280' }]}>
-                {tab.title}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+  // Render custom bottom tab bar
+  const renderBottomTabs = () => (
+    <View style={styles.bottomTabContainer}>
+      <View style={styles.bottomTabBar}>
+        {tabItems.map((tab, index) => (
+          <TouchableOpacity key={index} style={styles.tabItem} onPress={() => router.push(tab.route as any)}>
+            <IconSymbol size={24} name={tab.icon as any} color={tab.name === 'my-course' ? '#3B82F6' : '#6B7280'} />
+            <Text style={[styles.tabLabel, { color: tab.name === 'my-course' ? '#3B82F6' : '#6B7280' }]}>
+              {tab.title}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
-    );
+    </View>
+  );
+
+  const renderLoadingOrError = () => {
+    if (loading) {
+      return (
+        <SafeAreaView style={styles.container}>
+          <StatusBar barStyle="light-content" backgroundColor="#3B82F6" />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#3B82F6" />
+            <Text style={styles.loadingText}>Loading course details...</Text>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    if (error) {
+      return (
+        <SafeAreaView style={styles.container}>
+          <StatusBar barStyle="light-content" backgroundColor="#3B82F6" />
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
+              <Text style={styles.retryText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    return null;
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#3B82F6" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={styles.loadingText}>Loading course details...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (error) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#3B82F6" />
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
-            <Text style={styles.retryText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  if (loading || error) return renderLoadingOrError();
 
   const overallGrade = studentEnrollment?.finalGrade || 
     (studentEnrollment?.grade?.length 
       ? studentEnrollment.grade.reduce((sum, g) => sum + (g.score * g.weight), 0) 
       : 0);
+
+  const courseDetails = [
+    { icon: 'book-outline', label: 'Subject', value: course?.subjectId?.subjectName || 'N/A' },
+    { icon: 'code-outline', label: 'Course Code', value: course?.subjectId?.subjectCode || 'N/A' },
+    { icon: 'calendar-outline', label: 'Semester', value: course?.semesterId?.semesterName || 'N/A' },
+    { icon: 'stats-chart-outline', label: 'Attendance', value: `${attendanceStats.presentCount}/${attendanceStats.totalSessions} sessions attended (${attendanceStats.attendanceRate}%)` },
+    ...(enrollment ? [{ icon: getStatusInfo(enrollment.status).icon, label: 'Status', value: enrollment.status, color: getStatusInfo(enrollment.status).color }] : [])
+  ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -519,18 +480,12 @@ const CourseInfo = () => {
 
         {/* Legend */}
         <View style={styles.legendContainer}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#03045E' }]} />
-            <Text style={styles.legendText}>Attended</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#0077B6' }]} />
-            <Text style={styles.legendText}>Absent</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#90E0EF' }]} />
-            <Text style={styles.legendText}>Not Yet</Text>
-          </View>
+          {attendanceLabels.map((label, index) => (
+            <View key={index} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: attendanceColors[index] }]} />
+              <Text style={styles.legendText}>{label}</Text>
+            </View>
+          ))}
         </View>
 
         {/* Mark Report Card */}
@@ -571,13 +526,7 @@ const CourseInfo = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Course Details</Text>
           <View style={styles.detailsCard}>
-            {[
-              { icon: 'book-outline', label: 'Subject', value: course?.subjectId?.subjectName || 'N/A' },
-              { icon: 'code-outline', label: 'Course Code', value: course?.subjectId?.subjectCode || 'N/A' },
-              { icon: 'calendar-outline', label: 'Semester', value: course?.semesterId?.semesterName || 'N/A' },
-              { icon: 'stats-chart-outline', label: 'Attendance', value: `${attendanceStats.presentCount}/${attendanceStats.totalSessions} sessions attended (${attendanceStats.attendanceRate}%)` },
-              ...(enrollment ? [{ icon: getStatusInfo(enrollment.status).icon, label: 'Status', value: enrollment.status, color: getStatusInfo(enrollment.status).color }] : [])
-            ].map((detail, index) => (
+            {courseDetails.map((detail, index) => (
               <View key={index} style={styles.detailRow}>
                 <Ionicons name={detail.icon as any} size={20} color={detail.color || "#6B7280"} />
                 <View style={styles.detailContent}>

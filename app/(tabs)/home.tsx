@@ -292,7 +292,20 @@ const HomeScreen: React.FC = () => {
                 {featuredCourses.map((course, index) => {
                   const progress = coursesProgress[course._id] || 0;
                   return (
-                    <View key={course._id} style={[styles.featuredCourse, index > 0 && styles.featuredCourseMargin]}>
+                    <TouchableOpacity
+                      key={course._id}
+                      style={[styles.featuredCourse, index > 0 && styles.featuredCourseMargin]}
+                      onPress={() => {
+                        router.push({
+                          pathname: "/course-info",
+                          params: {
+                            courseId: course.courseId?._id,
+                            enrollmentId: course._id
+                          }
+                        });
+                      }}
+                      activeOpacity={0.8}
+                    >
                       {course.courseId?.image ? (
                         <Image
                           source={{ uri: course.courseId.image }}
@@ -318,7 +331,7 @@ const HomeScreen: React.FC = () => {
                           <Text style={styles.progressText}>{progress}%</Text>
                         </View>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   );
                 })}
               </ScrollView>
