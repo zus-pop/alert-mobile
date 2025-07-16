@@ -71,8 +71,6 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
 
         // Find user's enrollment for this course
         const enrollmentsResponse = await getStudentEnrollments(user._id);
-        console.log('Enrollments:', enrollmentsResponse.data);
-        console.log('Course ID:', user._id);
         const userEnrollment = enrollmentsResponse.data.find(
           (enr) => enr.courseId?._id === courseId
         );
@@ -87,7 +85,10 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
         // Fetch detailed student enrollment data
         try {
           const studentEnrollmentResponse = await getStudentEnrollmentById(user._id, userEnrollment._id);
-          setStudentEnrollment(studentEnrollmentResponse.data);
+          
+          const enrollmentData = studentEnrollmentResponse.data || studentEnrollmentResponse;
+          
+          setStudentEnrollment(enrollmentData);
         } catch (studentEnrollmentError) {
           console.error('Error fetching student enrollment details:', studentEnrollmentError);
           // Continue even if this fails
@@ -144,16 +145,18 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
     if (!attendances || attendances.length === 0) {
       return {
         totalSessions: studyProgress?.totalSessions || 20,
-        presentCount: studyProgress?.presentCount || 15,
-        absentCount: studyProgress?.absentCount || 3,
-        lateCount: studyProgress?.lateCount || 2,
-        attendanceRate: studyProgress?.attendanceRate || 87
+        presentCount: studyProgress?.presentCount || 0,
+        absentCount: studyProgress?.absentCount || 0,
+        lateCount: studyProgress?.lateCount || 0,
+        notYetCount: 20,
+        attendanceRate: studyProgress?.attendanceRate || 0
       };
     }
 
-    const presentCount = attendances.filter(att => att.status === 'Present').length;
-    const absentCount = attendances.filter(att => att.status === 'Absent').length;
-    const lateCount = attendances.filter(att => att.status === 'Late').length;
+    const presentCount = attendances.filter(att => att.status === 'PRESENT').length;
+    const absentCount = attendances.filter(att => att.status === 'ABSENT').length;
+    const lateCount = attendances.filter(att => att.status === 'LATE').length;
+    const notYetCount = attendances.filter(att => att.status === 'NOT YET').length;
     const totalSessions = attendances.length;
     const attendanceRate = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
 
@@ -162,6 +165,7 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
       presentCount,
       absentCount,
       lateCount,
+      notYetCount,
       attendanceRate
     };
   };
@@ -173,17 +177,20 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
     const radius1 = 85;
     const radius2 = 69;
     const radius3 = 53;
+    const radius4 = 37;
     
     const circumference1 = 2 * Math.PI * radius1;
     const circumference2 = 2 * Math.PI * radius2;
     const circumference3 = 2 * Math.PI * radius3;
+    const circumference4 = 2 * Math.PI * radius4;
     
     const attendanceStats = calculateAttendanceStats();
     
-    // Calculate stroke dash arrays and offsets for each layer
-    const presentStroke = (attendanceStats.presentCount / attendanceStats.totalSessions) * circumference1;
-    const absentStroke = (attendanceStats.absentCount / attendanceStats.totalSessions) * circumference2;
-    const futureStroke = (attendanceStats.lateCount / attendanceStats.totalSessions) * circumference3;
+    // Calculate stroke dash arrays for each layer
+    const presentStroke = attendanceStats.totalSessions > 0 ? (attendanceStats.presentCount / attendanceStats.totalSessions) * circumference1 : 0;
+    const absentStroke = attendanceStats.totalSessions > 0 ? (attendanceStats.absentCount / attendanceStats.totalSessions) * circumference2 : 0;
+    const lateStroke = attendanceStats.totalSessions > 0 ? (attendanceStats.lateCount / attendanceStats.totalSessions) * circumference3 : 0;
+    const notYetStroke = attendanceStats.totalSessions > 0 ? (attendanceStats.notYetCount / attendanceStats.totalSessions) * circumference4 : 0;
 
     return (
       <View style={styles.progressContainer}>
@@ -199,7 +206,7 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
               strokeWidth="16"
               strokeLinecap="round"
             />
-            {/* Present (dark blue) - largest segment */}
+            {/* Present (dark blue) - outermost layer */}
             <Circle
               cx={centerX}
               cy={centerY}
@@ -225,7 +232,7 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
               strokeDashoffset={circumference2 / 4}
               transform={`rotate(-90 ${centerX} ${centerY})`}
             />
-            {/* Future (light blue) */}
+            {/* Late (light blue) */}
             <Circle
               cx={centerX}
               cy={centerY}
@@ -234,8 +241,21 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
               stroke="#00B4D8"
               strokeWidth="16"
               strokeLinecap="round"
-              strokeDasharray={`${futureStroke} ${circumference3}`}
+              strokeDasharray={`${lateStroke} ${circumference3}`}
               strokeDashoffset={circumference3 / 4}
+              transform={`rotate(-90 ${centerX} ${centerY})`}
+            />
+            {/* Not Yet (lightest blue) */}
+            <Circle
+              cx={centerX}
+              cy={centerY}
+              r={radius4}
+              fill="none"
+              stroke="#90E0EF"
+              strokeWidth="16"
+              strokeLinecap="round"
+              strokeDasharray={`${notYetStroke} ${circumference4}`}
+              strokeDashoffset={circumference4 / 4}
               transform={`rotate(-90 ${centerX} ${centerY})`}
             />
           </Svg>
@@ -256,6 +276,9 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
           <View style={[styles.sideNumber, { backgroundColor: '#00B4D8' }]}>
             <Text style={styles.sideNumberText}>{attendanceStats.lateCount}</Text>
           </View>
+          <View style={[styles.sideNumber, { backgroundColor: '#90E0EF' }]}>
+            <Text style={styles.sideNumberText}>{attendanceStats.notYetCount}</Text>
+          </View>
         </View>
       </View>
     );
@@ -263,14 +286,18 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
 
   // Render grade bars with actual data
   const renderGradeBars = () => {
-    // Use grades from studyProgress if available, otherwise use studentEnrollment grades
-    const grades = studyProgress?.grades || studentEnrollment?.grade || [
-      { type: 'Project', score: 4.5, weight: 0.2 },
-      { type: 'PE', score: 8.5, weight: 0.3 },
-      { type: 'PT', score: 6.0, weight: 0.2 },
-      { type: 'FE', score: 7.5, weight: 0.3 },
-    ];
+    // Check if we have actual grade data
+    if (!studentEnrollment?.grade || studentEnrollment.grade.length === 0) {
+      return (
+        <View style={styles.noGradeContainer}>
+          <Ionicons name="school-outline" size={48} color="#9CA3AF" />
+          <Text style={styles.noGradeText}>No grades available yet</Text>
+          <Text style={styles.noGradeSubtext}>Grades will appear here once they are recorded</Text>
+        </View>
+      );
+    }
 
+    const grades = studentEnrollment.grade;
     const maxScore = 10;
 
     return (
@@ -282,13 +309,15 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
                 style={[
                   styles.gradeBar, 
                   { 
-                    height: `${(grade.score / maxScore) * 100}%`,
-                    backgroundColor: grade.score >= 8 ? '#4DAF00' : grade.score >= 6 ? '#FFA500' : '#E5E7EB'
+                    height: `${Math.max((grade.score / maxScore) * 100, 4)}%`, // Minimum 4% height for visibility
+                    backgroundColor: grade.score >= 8 ? '#4DAF00' : grade.score >= 6 ? '#FFA500' : grade.score > 0 ? '#2196F3' : '#E5E7EB'
                   }
                 ]} 
               />
+              <Text style={styles.gradeScore}>{grade.score.toFixed(1)}</Text>
             </View>
             <Text style={styles.gradeLabel}>{grade.type}</Text>
+            <Text style={styles.gradeWeight}>({Math.round(grade.weight * 100)}%)</Text>
           </View>
         ))}
       </View>
@@ -355,7 +384,16 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
   }
 
   const attendanceStats = calculateAttendanceStats();
-  const overallGrade = studyProgress?.overallGrade || studentEnrollment?.finalGrade || 8.5;
+  const overallGrade = studentEnrollment?.finalGrade || 
+    (studentEnrollment?.grade && studentEnrollment.grade.length > 0 
+      ? studentEnrollment.grade.reduce((sum, g) => sum + (g.score * g.weight), 0) 
+      : 0);
+
+  // Format overall grade for display
+  const formatOverallGrade = (grade: number) => {
+    if (grade === 0) return 'N/A';
+    return grade.toFixed(1);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -420,6 +458,10 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
             <View style={[styles.legendDot, { backgroundColor: '#00B4D8' }]} />
             <Text style={styles.legendText}>Late</Text>
           </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#90E0EF' }]} />
+            <Text style={styles.legendText}>Not Yet</Text>
+          </View>
         </View>
 
         {/* Mark Report Card */}
@@ -442,11 +484,12 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
           <View style={styles.successFooter}>
             <View style={styles.successContent}>
               <Text style={styles.successText}>
-                {overallGrade >= 8 ? 'Well done! Your grades are amazing!' : 
+                {overallGrade === 0 ? 'No grades recorded yet' :
+                 overallGrade >= 8 ? 'Well done! Your grades are amazing!' : 
                  overallGrade >= 6 ? 'Good job! Keep up the good work!' : 
                  'Keep working hard to improve your grades!'}
               </Text>
-              <Text style={styles.overallScore}>{overallGrade}</Text>
+              <Text style={styles.overallScore}>{formatOverallGrade(overallGrade)}</Text>
             </View>
             {renderSuccessChart()}
           </View>
@@ -570,7 +613,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     paddingHorizontal: 28,
     paddingVertical: 16,
-    overflow: 'hidden', // Add this to prevent avatar overflow
+    overflow: 'hidden',
   },
   headerContent: {
     flexDirection: 'row',
@@ -651,8 +694,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: -10, // Adjusted position
     top: '50%',
-    transform: [{ translateY: -50 }],
-    gap: 12,
+    transform: [{ translateY: -70 }], // Adjusted for 4 items
+    gap: 8, // Reduced gap for 4 items
   },
   sideNumber: {
     paddingHorizontal: 12,
@@ -670,22 +713,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 24,
+    gap: 16,
     paddingHorizontal: 20,
     marginTop: 24,
+    flexWrap: 'wrap',
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    marginBottom: 8,
   },
   legendDot: {
-    width: 28,
-    height: 12,
-    borderRadius: 6,
+    width: 24,
+    height: 10,
+    borderRadius: 5,
   },
   legendText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#000000',
   },
   markReportCard: {
@@ -730,6 +775,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     height: 160,
     marginBottom: 12,
+    marginTop: 40,
     gap: 24,
   },
   gradeItem: {
@@ -744,15 +790,50 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'flex-end',
     overflow: 'hidden',
+    position: 'relative',
   },
   gradeBar: {
     width: '100%',
     borderRadius: 8,
     minHeight: 40,
   },
+  gradeScore: {
+    position: 'absolute',
+    bottom: 5,
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
   gradeLabel: {
     fontSize: 12,
     color: '#000000',
+  },
+  gradeWeight: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  noGradeContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  noGradeText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  noGradeSubtext: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 4,
+    textAlign: 'center',
   },
   successFooter: {
     backgroundColor: '#F0FDF4',

@@ -4,34 +4,54 @@ export interface StudentEnrollment {
     _id: string;
     courseId: {
         _id: string;
-        subjectId: {
-            _id: string;
-            subjectCode: string;
-            subjectName: string;
-        };
-        semesterId: {
-            _id: string;
-            semesterName: string;
-            startDate: string;
-            endDate: string;
-        };
+        subjectId: string;
+        semesterId: string;
+        createdAt: string;
+        updatedAt: string;
+        __v: number;
+        image: string;
     };
-    studentId: string;
-    enrollmentDate: string;
+    studentId: {
+        _id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+        gender: string;
+        password: string;
+        deviceTokens: string[];
+        createdAt: string;
+        updatedAt: string;
+        __v: number;
+        isDeleted: boolean;
+        deletedAt: string | null;
+        studentCode: string;
+        image: string;
+    };
     grade: {
         type: string;
-        weight: number;
         score: number;
+        weight: number;
     }[];
     status: string;
+    enrollmentDate: string;
+    createdAt: string;
+    updatedAt: string;
+    __v: number;
     finalGrade?: number;
 }
 
 export interface AttendanceRecord {
     _id: string;
-    date: string;
-    status: 'Present' | 'Absent' | 'Late';
-    notes?: string;
+    enrollmentId: string;
+    sessionId: {
+        _id: string;
+        startTime: string;
+        endTime: string;
+    };
+    status: 'PRESENT' | 'ABSENT' | 'LATE' | 'NOT YET';
+    __v: number;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface StudyProgress {
@@ -54,7 +74,7 @@ export interface StudyProgress {
 // Get specific enrollment details for a student
 export async function getStudentEnrollmentById(studentId: string, enrollmentId: string): Promise<{ data: StudentEnrollment }> {
     try {
-        const response = await myAxios.get(`/api/students/${studentId}/enrollments/${enrollmentId}`);
+        const response = await myAxios.get(`/students/${studentId}/enrollments/${enrollmentId}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching student enrollment:', error);
@@ -65,8 +85,7 @@ export async function getStudentEnrollmentById(studentId: string, enrollmentId: 
 // Get attendance records for a specific enrollment
 export async function getStudentAttendances(studentId: string, enrollmentId: string): Promise<{ data: AttendanceRecord[] }> {
     try {
-        const response = await myAxios.get(`/api/students/${studentId}/enrollments/${enrollmentId}/attendances`);
-        console.log('Attendance records:', response.data);
+        const response = await myAxios.get(`/students/${studentId}/enrollments/${enrollmentId}/attendances`);
         return response.data;
     } catch (error) {
         console.error('Error fetching attendances:', error);
