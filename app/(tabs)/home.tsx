@@ -350,9 +350,14 @@ const HomeScreen: React.FC = () => {
               <View key={enrollment._id} style={styles.courseCard}>
                 <TouchableOpacity
                   onPress={() => {
-                    setSelectedCourseId(enrollment._id);
-                    router.push("/(tabs)/my-course");
-                  }}
+                      router.push({
+                        pathname: "/course-info",
+                        params: {
+                          courseId: enrollment.courseId?._id,
+                          enrollmentId: enrollment._id
+                        }
+                      });
+                    }}
                   style={styles.courseImageContainer}
                 >
                   {enrollment.courseId?.image ? (

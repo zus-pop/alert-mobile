@@ -56,7 +56,7 @@ const CourseInfo = () => {
     'IN PROGRESS': { color: '#F59E0B', icon: 'time-outline' }
   };
 
-  const attendanceColors = ['#03045E', '#0077B6', '#90E0EF'];
+  const attendanceColors = ['#22C55E', '#EF4444', '#9CA3AF'];
   const attendanceLabels = ['Attended', 'Absent', 'Not Yet'];
   
   const getStatusInfo = (status: string) => statusMap[status?.toUpperCase()] || { color: '#6B7280', icon: 'help-circle-outline' };
@@ -216,37 +216,44 @@ const CourseInfo = () => {
     }
 
     return (
-      <View style={styles.gradeContainer}>
-        {studentEnrollment.grade.map((grade, index) => (
-          <TouchableOpacity 
-            key={index} 
-            style={styles.gradeItem}
-            onPress={() => setSelectedGrade(grade)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.gradeBarContainer}>
-              <View 
-                style={[
-                  styles.gradeBar, 
-                  { 
-                    height: `${Math.max((grade.score / 10) * 100, 8)}%`,
-                    backgroundColor: gradeHelpers.getColor(grade.score)
-                  }
-                ]} 
-              />
-              <Text style={styles.gradeScore}>{grade.score.toFixed(1)}</Text>
-            </View>
-            <View style={styles.gradeLabelContainer}>
-              <Text style={styles.gradeLabel}>
-                {grade.type}
-              </Text>
-              <Text style={styles.gradeWeight}>
-                ({Math.round(grade.weight * 100)}%)
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={true}
+        style={styles.gradeScrollView}
+        contentContainerStyle={styles.gradeScrollContent}
+      >
+        <View style={styles.gradeContainer}>
+          {studentEnrollment.grade.map((grade, index) => (
+            <TouchableOpacity 
+              key={index} 
+              style={styles.gradeItem}
+              onPress={() => setSelectedGrade(grade)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.gradeBarContainer}>
+                <View 
+                  style={[
+                    styles.gradeBar, 
+                    { 
+                      height: `${Math.max((grade.score / 10) * 100, 8)}%`,
+                      backgroundColor: gradeHelpers.getColor(grade.score)
+                    }
+                  ]} 
+                />
+                <Text style={styles.gradeScore}>{grade.score.toFixed(1)}</Text>
+              </View>
+              <View style={styles.gradeLabelContainer}>
+                <Text style={styles.gradeLabel}>
+                  {grade.type}
+                </Text>
+                <Text style={styles.gradeWeight}>
+                  ({Math.round(grade.weight * 100)}%)
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
     );
   };
 
@@ -260,8 +267,11 @@ const CourseInfo = () => {
     }
 
     const grades = studentEnrollment.grade;
-    const chartWidth = 360, chartHeight = 120, padding = 50;
-    const graphWidth = chartWidth - (padding * 2);
+    const minChartWidth = 360;
+    const itemWidth = 80;
+    const dynamicWidth = Math.max(minChartWidth, grades.length * itemWidth);
+    const chartHeight = 120, padding = 60;
+    const graphWidth = dynamicWidth - (padding * 2);
     const graphHeight = chartHeight - 30;
 
     const points = grades.map((grade, index) => ({
@@ -277,56 +287,78 @@ const CourseInfo = () => {
 
     return (
       <View style={styles.successChartContainer}>
-        <Svg width={chartWidth} height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
-          <Defs>
-            <LinearGradient id="gradeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <Stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3" />
-              <Stop offset="100%" stopColor="#3B82F6" stopOpacity="0.05" />
-            </LinearGradient>
-          </Defs>
-          
-          {[2, 4, 6, 8].map((score) => (
-            <Path
-              key={score}
-              d={`M ${padding} ${chartHeight - 20 - ((score / 10) * graphHeight)} L ${chartWidth - padding} ${chartHeight - 20 - ((score / 10) * graphHeight)}`}
-              stroke="#E5E7EB"
-              strokeWidth="1"
-              strokeDasharray="2,2"
-            />
-          ))}
-          
-          {linePath && (
-            <Path
-              d={linePath}
-              stroke="#3B82F6"
-              strokeWidth="3"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
-          
-          {points.map((point, index) => (
-            <Circle
-              key={index}
-              cx={point.x}
-              cy={point.y}
-              r="4"
-              fill="#3B82F6"
-              stroke="#FFFFFF"
-              strokeWidth="2"
-            />
-          ))}
-        </Svg>
-        
-        <View style={styles.gradeLabelsContainer}>
-          {grades.map((grade, index) => (
-            <View key={index} style={styles.gradeLabelItem}>
-              <Text style={styles.gradeChartLabel}>{grade.type}</Text>
-              <Text style={styles.gradeChartScore}>{grade.score}</Text>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={true}
+          style={styles.chartScrollView}
+          contentContainerStyle={styles.chartScrollContent}
+        >
+          <View style={styles.chartWrapper}>
+            <Svg width={dynamicWidth} height={chartHeight} viewBox={`0 0 ${dynamicWidth} ${chartHeight}`}>
+              <Defs>
+                <LinearGradient id="gradeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <Stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3" />
+                  <Stop offset="100%" stopColor="#3B82F6" stopOpacity="0.05" />
+                </LinearGradient>
+              </Defs>
+              
+              {[2, 4, 6, 8].map((score) => (
+                <Path
+                  key={score}
+                  d={`M ${padding} ${chartHeight - 20 - ((score / 10) * graphHeight)} L ${dynamicWidth - padding} ${chartHeight - 20 - ((score / 10) * graphHeight)}`}
+                  stroke="#E5E7EB"
+                  strokeWidth="1"
+                  strokeDasharray="2,2"
+                />
+              ))}
+              
+              {linePath && (
+                <Path
+                  d={linePath}
+                  stroke="#3B82F6"
+                  strokeWidth="3"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+              
+              {points.map((point, index) => (
+                <Circle
+                  key={index}
+                  cx={point.x}
+                  cy={point.y}
+                  r="4"
+                  fill="#3B82F6"
+                  stroke="#FFFFFF"
+                  strokeWidth="2"
+                />
+              ))}
+            </Svg>
+            
+            <View style={[styles.gradeLabelsContainer, { width: dynamicWidth }]}>
+              {grades.map((grade, index) => {
+                const labelX = padding + (index * (graphWidth / Math.max(grades.length - 1, 1)));
+                return (
+                  <View 
+                    key={index} 
+                    style={[
+                      styles.gradeLabelItem,
+                      { 
+                        position: 'absolute',
+                        left: labelX - 30,
+                        width: 60
+                      }
+                    ]}
+                  >
+                    <Text style={styles.gradeChartLabel}>{grade.type}</Text>
+                    <Text style={styles.gradeChartScore}>{grade.score}</Text>
+                  </View>
+                );
+              })}
             </View>
-          ))}
-        </View>
+          </View>
+        </ScrollView>
       </View>
     );
   };
@@ -727,21 +759,26 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     overflow: 'hidden', // Prevent horizontal overflow
   },
-  gradeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    height: 220,
+  gradeScrollView: {
     marginBottom: 20,
     marginTop: 40,
+  },
+  gradeScrollContent: {
+    paddingHorizontal: 12,
+    paddingRight: 40,
+  },
+  gradeContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: 220,
     gap: 12,
+    paddingRight: 20,
   },
   gradeItem: {
-    flex: 1,
     alignItems: 'center',
     gap: 8,
-    minWidth: 50,
-    maxWidth: 80,
+    width: 70,
+    marginHorizontal: 4,
   },
   gradeBarContainer: {
     width: 40,
@@ -832,6 +869,17 @@ const styles = StyleSheet.create({
     height: 200,
     overflow: 'hidden',
     paddingTop: 10,
+  },
+  chartScrollView: {
+    flex: 1,
+  },
+  chartScrollContent: {
+    paddingHorizontal: 12,
+    paddingRight: 40,
+  },
+  chartWrapper: {
+    alignItems: 'center',
+    paddingRight: 20,
   },
   section: {
     marginBottom: 24,
@@ -1025,17 +1073,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   gradeLabelsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    position: 'relative',
+    height: 40,
     paddingHorizontal: 20,
     marginTop: 20,
-    flexWrap: 'wrap',
-    gap: 8,
   },
   gradeLabelItem: {
     alignItems: 'center',
-    flex: 1,
-    minWidth: 60,
+    justifyContent: 'center',
     paddingHorizontal: 4,
   },
   gradeChartLabel: {
