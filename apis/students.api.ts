@@ -48,7 +48,7 @@ export interface AttendanceRecord {
         startTime: string;
         endTime: string;
     };
-    status: 'PRESENT' | 'ABSENT' | 'LATE' | 'NOT YET';
+    status: 'ATTENDED' | 'ABSENT' | 'NOT YET';
     __v: number;
     createdAt: string;
     updatedAt: string;
@@ -83,7 +83,7 @@ export async function getStudentEnrollmentById(studentId: string, enrollmentId: 
 }
 
 // Get attendance records for a specific enrollment
-export async function getStudentAttendances(studentId: string, enrollmentId: string): Promise<{ data: AttendanceRecord[] }> {
+export async function getStudentAttendances(studentId: string, enrollmentId: string): Promise<AttendanceRecord[]> {
     try {
         const response = await myAxios.get(`/students/${studentId}/enrollments/${enrollmentId}/attendances`);
         return response.data;

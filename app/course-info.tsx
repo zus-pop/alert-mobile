@@ -126,7 +126,12 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
         // Fetch attendance records
         try {
           const attendanceResponse = await getStudentAttendances(user._id, userEnrollment._id);
-          setAttendances(attendanceResponse.data);
+          console.log('Attendance response:', attendanceResponse);
+          console.log('Attendance data length:', attendanceResponse.length);
+          console.log('First attendance status:', attendanceResponse[0]?.status);
+          
+          // Set the attendance data correctly
+          setAttendances(attendanceResponse);
         } catch (attendanceError) {
           console.error('Error fetching attendance records:', attendanceError);
           // Continue even if this fails
@@ -150,15 +155,13 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
         totalSessions: studyProgress?.totalSessions || 20,
         presentCount: studyProgress?.presentCount || 0,
         absentCount: studyProgress?.absentCount || 0,
-        lateCount: studyProgress?.lateCount || 0,
         notYetCount: 20,
         attendanceRate: studyProgress?.attendanceRate || 0
       };
     }
 
-    const presentCount = attendances.filter(att => att.status === 'PRESENT').length;
+    const presentCount = attendances.filter(att => att.status === 'ATTENDED').length;
     const absentCount = attendances.filter(att => att.status === 'ABSENT').length;
-    const lateCount = attendances.filter(att => att.status === 'LATE').length;
     const notYetCount = attendances.filter(att => att.status === 'NOT YET').length;
     const totalSessions = attendances.length;
     const attendanceRate = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
@@ -167,7 +170,6 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
       totalSessions,
       presentCount,
       absentCount,
-      lateCount,
       notYetCount,
       attendanceRate
     };
@@ -192,7 +194,6 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
     // Calculate stroke dash arrays for each layer
     const presentStroke = attendanceStats.totalSessions > 0 ? (attendanceStats.presentCount / attendanceStats.totalSessions) * circumference1 : 0;
     const absentStroke = attendanceStats.totalSessions > 0 ? (attendanceStats.absentCount / attendanceStats.totalSessions) * circumference2 : 0;
-    const lateStroke = attendanceStats.totalSessions > 0 ? (attendanceStats.lateCount / attendanceStats.totalSessions) * circumference3 : 0;
     const notYetStroke = attendanceStats.totalSessions > 0 ? (attendanceStats.notYetCount / attendanceStats.totalSessions) * circumference4 : 0;
 
     return (
@@ -235,19 +236,6 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
               strokeDashoffset={circumference2 / 4}
               transform={`rotate(-90 ${centerX} ${centerY})`}
             />
-            {/* Late (light blue) */}
-            <Circle
-              cx={centerX}
-              cy={centerY}
-              r={radius3}
-              fill="none"
-              stroke="#00B4D8"
-              strokeWidth="16"
-              strokeLinecap="round"
-              strokeDasharray={`${lateStroke} ${circumference3}`}
-              strokeDashoffset={circumference3 / 4}
-              transform={`rotate(-90 ${centerX} ${centerY})`}
-            />
             {/* Not Yet (lightest blue) */}
             <Circle
               cx={centerX}
@@ -275,9 +263,6 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
           </View>
           <View style={[styles.sideNumber, { backgroundColor: '#0077B6' }]}>
             <Text style={styles.sideNumberText}>{attendanceStats.absentCount}</Text>
-          </View>
-          <View style={[styles.sideNumber, { backgroundColor: '#00B4D8' }]}>
-            <Text style={styles.sideNumberText}>{attendanceStats.lateCount}</Text>
           </View>
           <View style={[styles.sideNumber, { backgroundColor: '#90E0EF' }]}>
             <Text style={styles.sideNumberText}>{attendanceStats.notYetCount}</Text>
@@ -578,22 +563,6 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
         </View>
       </View>
       
-      {/* Header */}
-      <View style={styles.headerContainer}>
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <Text style={styles.greeting}>
-              Hi, {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : 'Nguyễn Quốc Huy'}
-            </Text>
-            <View style={styles.avatarContainer}>
-              <Image
-                source={user?.image ? { uri: user.image } : require('../assets/images/avatar.png')}
-                style={styles.avatar}
-              />
-            </View>
-          </View>
-        </View>
-      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -614,15 +583,11 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
         <View style={styles.legendContainer}>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#03045E' }]} />
-            <Text style={styles.legendText}>Present</Text>
+            <Text style={styles.legendText}>Attended</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#0077B6' }]} />
             <Text style={styles.legendText}>Absent</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#00B4D8' }]} />
-            <Text style={styles.legendText}>Late</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#90E0EF' }]} />
@@ -700,7 +665,7 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Attendance</Text>
                 <Text style={styles.detailValue}>
-                  {attendanceStats.presentCount}/{attendanceStats.totalSessions} sessions ({attendanceStats.attendanceRate}%)
+                  {attendanceStats.presentCount}/{attendanceStats.totalSessions} sessions attended ({attendanceStats.attendanceRate}%)
                 </Text>
               </View>
             </View>
