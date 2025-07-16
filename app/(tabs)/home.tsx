@@ -1,5 +1,6 @@
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import * as React from "react";
+import { useEffect, useState } from "react";
 import {
   Image,
   Platform,
@@ -12,8 +13,10 @@ import {
   TouchableOpacity,
   View,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { setUser as fetchUserFromAPI } from "../../apis/auth.api";
+import { CourseData, getCourses } from "../../apis/courses.api";
 import { Enrollment, getStudentEnrollments } from "../../apis/enrollments.api";
 import { useNotification } from "../../contexts/notification-provider";
 import { useAuthStore } from "../../stores/useAuthStore";
@@ -33,9 +36,9 @@ const weeklyRead = require("../../assets/images/weeklyRead.png");
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Tính toán kích thước responsive
-const cardWidth = Math.max(screenWidth * 0.42, 160); // Tối thiểu 160, tối đa 42% màn hình
-const cardHeight = cardWidth * 1.4; // Tỷ lệ 1.4:1
-const imageHeight = cardWidth * 0.65; // Chiều cao ảnh = 65% chiều rộng card
+const cardWidth = Math.max(screenWidth * 0.42, 160);
+const cardHeight = cardWidth * 1.4;
+const imageHeight = cardWidth * 0.65;
 
 interface Alert {
   _id: string;
@@ -51,10 +54,14 @@ const HomeScreen: React.FC = () => {
   const setUser = useAuthStore((state) => state.setUser);
   const { requestPushToken } = useNotification();
   const setSelectedCourseId = useSelectedCourseStore((state) => state.setSelectedCourseId);
+  
+  // States
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [allCourses, setAllCourses] = useState<CourseData[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [filteredEnrollments, setFilteredEnrollments] = useState<Enrollment[]>([]);
+  const [filteredCourses, setFilteredCourses] = useState<CourseData[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
 
   useEffect(() => {
     requestPushToken();
@@ -99,27 +106,116 @@ const HomeScreen: React.FC = () => {
     fetchEnrollments();
   }, [user?._id]);
 
-  // Filter enrollments based on search query
+  // Fetch all courses using your existing API
+  useEffect(() => {
+    const fetchAllCourses = async () => {
+      if (!token) return;
+      
+      try {
+        setLoadingCourses(true);
+        const response = await getCourses();
+        setAllCourses(response.data || []);
+      } catch (error) {
+        console.error('Error fetching courses:', error);
+        setAllCourses([]);
+      } finally {
+        setLoadingCourses(false);
+      }
+    };
+    
+    fetchAllCourses();
+  }, [token]);
+
+  // Filter courses based on search query
   useEffect(() => {
     if (searchQuery.trim() === "") {
-      setFilteredEnrollments(enrollments);
+      setFilteredCourses(allCourses);
     } else {
-      const filtered = enrollments.filter((enrollment) => {
-        const courseName = enrollment.courseId?.subjectId?.subjectName?.toLowerCase() || "";
-        const courseCode = enrollment.courseId?.subjectId?.subjectCode?.toLowerCase() || "";
-        const semesterName = enrollment.courseId?.semesterId?.semesterName?.toLowerCase() || "";
-        const query = searchQuery.toLowerCase();
+      const query = searchQuery.toLowerCase();
+      
+      const filtered = allCourses.filter((course) => {
+        const courseName = course.subjectId?.subjectName?.toLowerCase() || "";
+        const courseCode = course.subjectId?.subjectCode?.toLowerCase() || "";
+        const semesterName = course.semesterId?.semesterName?.toLowerCase() || "";
         
         return courseName.includes(query) || 
                courseCode.includes(query) || 
                semesterName.includes(query);
       });
-      setFilteredEnrollments(filtered);
+      
+      setFilteredCourses(filtered);
     }
-  }, [searchQuery, enrollments]);
+  }, [searchQuery, allCourses]);
 
   // Check if there are any alerts
   const hasAlerts = alerts.length > 0;
+
+  // Check if user is enrolled in a course
+  const isEnrolledInCourse = (courseId: string) => {
+    return enrollments.some(enrollment => enrollment.courseId._id === courseId);
+  };
+
+  // Get course images (you can customize this logic)
+  const getCourseImage = (course: CourseData | Enrollment['courseId']) => {
+    // You can add logic here to return different images based on course type
+    const images = [uiDesign, uxDesign, webDesign, wireframe];
+    const randomIndex = Math.floor(Math.random() * images.length);
+    return images[randomIndex];
+  };
+
+  // Render course card
+  const renderCourseCard = (course: CourseData) => {
+    const isEnrolled = isEnrolledInCourse(course._id);
+    
+    return (
+      <View key={course._id} style={styles.courseCard}>
+        <TouchableOpacity
+          onPress={() => {
+            router.push({
+              pathname: "/course-info",
+              params: { courseId: course._id }
+            });
+          }}
+          style={styles.courseImageContainer}
+        >
+          <Image 
+            source={getCourseImage(course)} 
+            style={styles.courseImage}
+            resizeMode="cover"
+          />
+          {isEnrolled && (
+            <View style={styles.enrolledBadge}>
+              <Text style={styles.enrolledBadgeText}>Enrolled</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        <View style={styles.courseTextContainer}>
+          <Text style={styles.courseCardTitle} numberOfLines={2} ellipsizeMode="tail">
+            {course.subjectId?.subjectName || "No name"}
+          </Text>
+          <Text style={styles.courseCardDesc} numberOfLines={1} ellipsizeMode="tail">
+            {course.subjectId?.subjectCode || ""} • {course.semesterId?.semesterName || ""}
+          </Text>
+          <TouchableOpacity 
+            style={[
+              styles.keepLearningBtn,
+              isEnrolled ? {} : { backgroundColor: "#4CAF50" }
+            ]}
+            onPress={() => {
+              router.push({
+                pathname: "/course-info",
+                params: { courseId: course._id }
+              });
+            }}
+          >
+            <Text style={styles.keepLearningText}>
+              {isEnrolled ? "View Course" : "View Course"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -180,51 +276,26 @@ const HomeScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* My Course */}
-        <Text style={styles.sectionTitle}>My Course</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.courseList}
-          contentContainerStyle={styles.courseListContent}
-        >
-          {filteredEnrollments.map((enrollment) => (
-            <View key={enrollment._id} style={styles.courseCard}>
-              <TouchableOpacity
-                onPress={() => {
-                  setSelectedCourseId(enrollment._id);
-                  router.push("/(tabs)/my-course");
-                }}
-                style={styles.courseImageContainer}
-              >
-                {enrollment.courseId?.image ? (
-                  <Image 
-                    source={{ uri: enrollment.courseId.image }} 
-                    style={styles.courseImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={[styles.courseImage, { backgroundColor: "#F5F6FA" }]} />
-                )}
-              </TouchableOpacity>
-              <View style={styles.courseTextContainer}>
-                <Text style={styles.courseCardTitle} numberOfLines={2} ellipsizeMode="tail">
-                  {enrollment.courseId?.subjectId?.subjectName || "No name"}
-                </Text>
-                <Text style={styles.courseCardDesc} numberOfLines={1} ellipsizeMode="tail">
-                  {enrollment.courseId?.semesterId?.semesterName || ""}
-                </Text>
-                <TouchableOpacity style={styles.keepLearningBtn}>
-                  <Text style={styles.keepLearningText}>Keep learning</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-        
-        <TouchableOpacity style={styles.seeAllBtn}>
-          <Text style={styles.seeAllText}>See All Courses</Text>
-        </TouchableOpacity>
+        {/* All Courses Section */}
+        <Text style={styles.sectionTitle}>
+          All Courses ({filteredCourses.length})
+        </Text>
+
+        {loadingCourses ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#2B3A67" />
+            <Text style={styles.loadingText}>Loading courses...</Text>
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.courseList}
+            contentContainerStyle={styles.courseListContent}
+          >
+            {filteredCourses.map(renderCourseCard)}
+          </ScrollView>
+        )}
 
         {/* Weekly Reads */}
         <Text style={styles.sectionTitle}>Weekly Reads</Text>
@@ -282,14 +353,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: Platform.OS === 'ios' ? 16 : 8,
     marginBottom: 8,
-    paddingHorizontal: Math.max(16, screenWidth * 0.04), // Responsive padding
+    paddingHorizontal: Math.max(16, screenWidth * 0.04),
   },
   scrollContent: {
     flex: 1,
   },
   scrollContainer: {
     paddingHorizontal: Math.max(16, screenWidth * 0.04),
-    paddingBottom: 120, // Đủ space cho tab bar
+    paddingBottom: 120,
   },
   avatar: { 
     width: Math.min(56, screenWidth * 0.14), 
@@ -426,11 +497,26 @@ const styles = StyleSheet.create({
   courseImageContainer: {
     borderRadius: 12,
     overflow: 'hidden',
+    position: 'relative',
   },
   courseImage: {
     width: "100%",
     height: imageHeight,
     borderRadius: 12,
+  },
+  enrolledBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  enrolledBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   courseTextContainer: {
     flex: 1,
@@ -460,19 +546,16 @@ const styles = StyleSheet.create({
     fontWeight: "bold", 
     fontSize: Math.max(12, screenWidth * 0.035) 
   },
-  seeAllBtn: {
-    alignSelf: "center",
-    marginVertical: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#2B3A67",
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
   },
-  seeAllText: { 
-    color: "#2B3A67", 
-    fontWeight: "bold", 
-    fontSize: Math.max(13, screenWidth * 0.036) 
+  loadingText: {
+    marginTop: 12,
+    fontSize: Math.max(14, screenWidth * 0.04),
+    color: "#666",
   },
   readsList: { 
     marginBottom: 16,

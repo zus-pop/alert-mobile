@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useRef, useState } from 'react';
+import { router } from 'expo-router';
+import * as React from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Enrollment, getStudentEnrollments } from '../../apis/enrollments.api';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -226,11 +228,13 @@ const MyCourse: React.FC = () => {
                   <TouchableOpacity 
                     style={styles.overviewButton}
                     onPress={() => {
-                      // Clear selected course when user interacts with the course
-                      clearSelectedCourse();
+                      router.push({
+                        pathname: "/course-info",
+                        params: { enrollmentId: enrollment._id }
+                      });
                     }}
                   >
-                    <Text style={styles.overviewText}>View Courses</Text>
+                    <Text style={styles.overviewText}>View Course Details</Text>
                   </TouchableOpacity>
                 </TouchableOpacity>
               );

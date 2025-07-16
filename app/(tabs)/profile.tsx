@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import * as React from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -200,7 +201,16 @@ export default function ProfileScreen() {
           {/* Course List - Vertical column, không FlatList/ScrollView con */}
           {getInProgressCourses().length > 0 ? (
             getInProgressCourses().map((enrollment) => (
-              <View key={enrollment._id} style={[styles.latestCourseCard, { marginBottom: 12 }]}> 
+              <TouchableOpacity 
+                key={enrollment._id} 
+                style={[styles.latestCourseCard, { marginBottom: 12 }]}
+                onPress={() => {
+                  router.push({
+                    pathname: "/course-info",
+                    params: { enrollmentId: enrollment._id }
+                  });
+                }}
+              > 
                 {typeof enrollment.courseId === 'object' && 'image' in enrollment.courseId && enrollment.courseId.image ? (
                   <Image
                     source={{ uri: (enrollment.courseId as any).image }}
@@ -231,7 +241,7 @@ export default function ProfileScreen() {
                     )}
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           ) : (
             <View className="items-center py-8">

@@ -37,3 +37,14 @@ export async function getCourses(): Promise<ApiResponse> {
         throw error;
     }
 }
+
+export async function getCourseById(courseId: string): Promise<{ data: CourseData }> {
+    try {
+        const response = await myAxios.get(`/courses/${courseId}`);
+        console.log("Course data:", response.data);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching course by ID:", error);
+        throw error;
+    }
+}
