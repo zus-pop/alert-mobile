@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Image,
+  Modal,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -26,6 +27,7 @@ import {
   StudentEnrollment 
 } from '../apis/students.api';
 import { useAuthStore } from '../stores/useAuthStore';
+import { IconSymbol } from '../components/ui/IconSymbol';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -40,6 +42,7 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedGrade, setSelectedGrade] = useState<{type: string, score: number, weight: number} | null>(null);
   const { user } = useAuthStore();
 
   useEffect(() => {
@@ -300,25 +303,42 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
     const grades = studentEnrollment.grade;
     const maxScore = 10;
 
+    // Function to truncate long grade type names
+    const truncateGradeType = (type: string) => {
+      if (type.length <= 8) return type;
+      return type.substring(0, 6) + '..';
+    };
+
     return (
       <View style={styles.gradeContainer}>
         {grades.map((grade, index) => (
-          <View key={index} style={styles.gradeItem}>
+          <TouchableOpacity 
+            key={index} 
+            style={styles.gradeItem}
+            onPress={() => setSelectedGrade(grade)}
+            activeOpacity={0.7}
+          >
             <View style={styles.gradeBarContainer}>
               <View 
                 style={[
                   styles.gradeBar, 
                   { 
-                    height: `${Math.max((grade.score / maxScore) * 100, 4)}%`, // Minimum 4% height for visibility
-                    backgroundColor: grade.score >= 8 ? '#4DAF00' : grade.score >= 6 ? '#FFA500' : grade.score > 0 ? '#2196F3' : '#E5E7EB'
+                    height: `${Math.max((grade.score / maxScore) * 100, 8)}%`, // Minimum 8% height for better visibility
+                    backgroundColor: grade.score >= 8 ? '#4DAF00' : grade.score >= 5 ? '#FFA500' :  grade.score > 0 ? '#EF4444' : '#E5E7EB'
                   }
                 ]} 
               />
               <Text style={styles.gradeScore}>{grade.score.toFixed(1)}</Text>
             </View>
-            <Text style={styles.gradeLabel}>{grade.type}</Text>
-            <Text style={styles.gradeWeight}>({Math.round(grade.weight * 100)}%)</Text>
-          </View>
+            <View style={styles.gradeLabelContainer}>
+              <Text style={styles.gradeLabel} numberOfLines={1} ellipsizeMode="tail">
+                {truncateGradeType(grade.type)}
+              </Text>
+              <Text style={styles.gradeWeight} numberOfLines={1}>
+                ({Math.round(grade.weight * 100)}%)
+              </Text>
+            </View>
+          </TouchableOpacity>
         ))}
       </View>
     );
@@ -352,6 +372,124 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
             strokeLinejoin="round"
           />
         </Svg>
+      </View>
+    );
+  };
+
+  // Render grade detail modal
+  const renderGradeModal = () => {
+    if (!selectedGrade) return null;
+
+    const getGradeColorByScore = (score: number) => {
+      if (score >= 8) return '#4DAF00';
+      if (score >= 5) return '#FFA500';
+      if (score > 0) return '#EF4444';
+      return '#E5E7EB';
+    };
+
+    const getGradeStatus = (score: number) => {
+      if (score >= 8) return 'Excellent';
+      if (score >= 6) return 'Good';
+      if (score >= 5) return 'Average';
+      if (score > 0) return 'Poor';
+      return 'Not Graded';
+    };
+
+    return (
+      <Modal
+        visible={selectedGrade !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedGrade(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Grade Details</Text>
+              <TouchableOpacity 
+                onPress={() => setSelectedGrade(null)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.gradeDetailContainer}>
+              <View style={[styles.gradeColorIndicator, { backgroundColor: getGradeColorByScore(selectedGrade.score) }]} />
+              <View style={styles.gradeDetailInfo}>
+                <Text style={styles.gradeDetailType}>{selectedGrade.type}</Text>
+                <Text style={styles.gradeDetailScore}>{selectedGrade.score.toFixed(1)}/10</Text>
+                <Text style={styles.gradeDetailWeight}>Weight: {Math.round(selectedGrade.weight * 100)}%</Text>
+                <Text style={[styles.gradeDetailStatus, { color: getGradeColorByScore(selectedGrade.score) }]}>
+                  {getGradeStatus(selectedGrade.score)}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.modalCloseButton}
+              onPress={() => setSelectedGrade(null)}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  // Render custom bottom tab bar
+  const renderBottomTabs = () => {
+    const tabItems = [
+      { 
+        name: 'home', 
+        title: 'Home', 
+        icon: 'house.fill',
+        route: '/(tabs)/home'
+      },
+      { 
+        name: 'chat', 
+        title: 'Chat', 
+        icon: 'chat.fill',
+        route: '/(tabs)/chat'
+      },
+      { 
+        name: 'my-course', 
+        title: 'My Course', 
+        icon: 'book.fill',
+        route: '/(tabs)/my-course'
+      },
+      { 
+        name: 'profile', 
+        title: 'My Profile', 
+        icon: 'person.fill',
+        route: '/(tabs)/profile'
+      }
+    ];
+
+    return (
+      <View style={styles.bottomTabContainer}>
+        <View style={styles.bottomTabBar}>
+          {tabItems.map((tab, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.tabItem}
+              onPress={() => router.push(tab.route as any)}
+            >
+              <IconSymbol 
+                size={24} 
+                name={tab.icon as any} 
+                color={tab.name === 'my-course' ? '#3B82F6' : '#6B7280'} 
+              />
+              <Text style={[
+                styles.tabLabel,
+                { color: tab.name === 'my-course' ? '#3B82F6' : '#6B7280' }
+              ]}>
+                {tab.title}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
     );
   };
@@ -393,6 +531,34 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
   const formatOverallGrade = (grade: number) => {
     if (grade === 0) return 'N/A';
     return grade.toFixed(1);
+  };
+
+  // Get status color based on enrollment status
+  const getStatusColor = (status: string) => {
+    switch (status?.toUpperCase()) {
+      case 'PASSED':
+        return '#22C55E'; // Green
+      case 'NOT PASSED':
+        return '#EF4444'; // Red
+      case 'IN PROGRESS':
+        return '#F59E0B'; // Orange/Amber
+      default:
+        return '#6B7280'; // Gray
+    }
+  };
+
+  // Get status icon based on enrollment status
+  const getStatusIcon = (status: string) => {
+    switch (status?.toUpperCase()) {
+      case 'PASSED':
+        return 'checkmark-circle-outline';
+      case 'NOT PASSED':
+        return 'close-circle-outline';
+      case 'IN PROGRESS':
+        return 'time-outline';
+      default:
+        return 'help-circle-outline';
+    }
   };
 
   return (
@@ -541,10 +707,10 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
             
             {enrollment && (
               <View style={styles.detailRow}>
-                <Ionicons name="checkmark-circle-outline" size={20} color="#22C55E" />
+                <Ionicons name={getStatusIcon(enrollment.status)} size={20} color={getStatusColor(enrollment.status)} />
                 <View style={styles.detailContent}>
                   <Text style={styles.detailLabel}>Status</Text>
-                  <Text style={[styles.detailValue, { color: '#22C55E' }]}>
+                  <Text style={[styles.detailValue, { color: getStatusColor(enrollment.status) }]}>
                     {enrollment.status}
                   </Text>
                 </View>
@@ -553,6 +719,12 @@ const CourseInfo: React.FC<CourseInfoProps> = () => {
           </View>
         </View>
       </ScrollView>
+      
+      {/* Bottom Tab Navigation */}
+      {renderBottomTabs()}
+      
+      {/* Grade Detail Modal */}
+      {renderGradeModal()}
     </SafeAreaView>
   );
 };
@@ -644,7 +816,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 120, // Increased to account for bottom tab bar
   },
   titleContainer: {
     paddingHorizontal: 20,
@@ -768,6 +940,7 @@ const styles = StyleSheet.create({
   chartBody: {
     paddingHorizontal: 24,
     paddingBottom: 24,
+    overflow: 'hidden', // Prevent horizontal overflow
   },
   gradeContainer: {
     flexDirection: 'row',
@@ -776,12 +949,13 @@ const styles = StyleSheet.create({
     height: 160,
     marginBottom: 12,
     marginTop: 40,
-    gap: 24,
+    gap: 16, // Reduced gap for better consistency
   },
   gradeItem: {
     flex: 1,
     alignItems: 'center',
     gap: 8,
+    minWidth: 0, // Allow flex items to shrink
   },
   gradeBarContainer: {
     width: 40,
@@ -807,14 +981,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
+  gradeLabelContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingHorizontal: 2,
+  },
   gradeLabel: {
     fontSize: 12,
     color: '#000000',
+    textAlign: 'center',
+    fontWeight: '500',
   },
   gradeWeight: {
     fontSize: 10,
     color: '#6B7280',
     marginTop: 2,
+    textAlign: 'center',
   },
   noGradeContainer: {
     alignItems: 'center',
@@ -930,6 +1113,123 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  bottomTabContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: 'transparent',
+  },
+  bottomTabBar: {
+    backgroundColor: '#F5F6FA',
+    borderRadius: 24,
+    padding: 6,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    height: 80,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  tabItem: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  tabLabel: {
+    fontSize: 12,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 320,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  gradeDetailContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+  },
+  gradeColorIndicator: {
+    width: 4,
+    height: 60,
+    borderRadius: 2,
+    marginRight: 16,
+  },
+  gradeDetailInfo: {
+    flex: 1,
+  },
+  gradeDetailType: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  gradeDetailScore: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  gradeDetailWeight: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  gradeDetailStatus: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  modalCloseButton: {
+    backgroundColor: '#3B82F6',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalCloseText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '500',
