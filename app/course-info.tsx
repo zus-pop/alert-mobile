@@ -481,19 +481,17 @@ const CourseInfo = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
-      {/* Status Bar */}
-      <View style={styles.statusBar}>
-        <Text style={styles.timeText}>09:41</Text>
-        <View style={styles.statusIcons}>
-          <Ionicons name="cellular" size={16} color="#000" />
-          <Ionicons name="wifi" size={16} color="#000" />
-          <View style={styles.batteryIcon}>
-            <View style={styles.batteryBody} />
-            <View style={styles.batteryTip} />
-          </View>
-        </View>
+      {/* Back Button */}
+      <View style={styles.backButtonContainer}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.push('/(tabs)/my-course')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="chevron-back" size={24} color="#3B82F6" />
+          <Text style={styles.backButtonText}>My Course</Text>
+        </TouchableOpacity>
       </View>
-      
 
       <ScrollView
         style={styles.scrollView}
@@ -589,55 +587,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  statusBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 36,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+  backButtonContainer: {
+    marginTop: 22,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
-  timeText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  statusIcons: {
+  backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-  },
-  batteryIcon: {
-    position: 'relative',
-    width: 24,
-    height: 12,
-  },
-  batteryBody: {
-    width: 20,
-    height: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.4)',
-    borderRadius: 2,
-    backgroundColor: '#000000',
+    borderColor: '#E2E8F0',
+    alignSelf: 'flex-start',
   },
-  batteryTip: {
-    position: 'absolute',
-    right: -2,
-    top: 4,
-    width: 2,
-    height: 4,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 1,
+  backButtonText: {
+    fontSize: 16,
+    color: '#3B82F6',
+    fontWeight: '500',
+    marginLeft: 4,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 120, // Increased to account for bottom tab bar
+    paddingBottom: 120,
   },
   titleContainer: {
     paddingHorizontal: 20,
-    marginTop: 24,
+    marginTop: 20, // Reduced since we have back button now
   },
   mainTitle: {
     fontSize: 40,
@@ -647,18 +628,17 @@ const styles = StyleSheet.create({
   },
   progressSection: {
     paddingHorizontal: 20,
-    marginTop: 32,
+    marginTop: 40, // Increased spacing
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-    minHeight: 200, // Add minimum height to prevent overflow
+    minHeight: 200,
   },
   progressContainer: {
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%', // Ensure full width
-    maxWidth: screenWidth - 40, // Prevent overflow
+    width: '100%',
+    maxWidth: screenWidth - 40,
   },
   progressWrapper: {
     position: 'relative',
@@ -704,7 +684,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
     paddingHorizontal: 20,
-    marginTop: 24,
+    marginTop: 32, // Increased spacing
     flexWrap: 'wrap',
   },
   legendItem: {
@@ -724,7 +704,7 @@ const styles = StyleSheet.create({
   },
   markReportCard: {
     marginHorizontal: 4,
-    marginTop: 32,
+    marginTop: 40, // Increased spacing
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     shadowColor: '#000',
@@ -736,7 +716,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     paddingHorizontal: 24,
-    paddingVertical: 24,
+    paddingVertical: 20, // Reduced padding
   },
   cardHeaderTitle: {
     flexDirection: 'row',
@@ -756,12 +736,12 @@ const styles = StyleSheet.create({
   },
   chartBody: {
     paddingHorizontal: 24,
-    paddingBottom: 24,
-    overflow: 'hidden', // Prevent horizontal overflow
+    paddingBottom: 20, // Reduced padding
+    overflow: 'hidden',
   },
   gradeScrollView: {
+    marginTop: 30, // Reduced spacing
     marginBottom: 20,
-    marginTop: 40,
   },
   gradeScrollContent: {
     paddingHorizontal: 12,
@@ -847,7 +827,7 @@ const styles = StyleSheet.create({
   successFooter: {
     backgroundColor: '#F0FDF4',
     paddingHorizontal: 24,
-    paddingVertical: 24,
+    paddingVertical: 20, // Reduced padding
   },
   successContent: {
     flexDirection: 'row',
@@ -884,7 +864,7 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
     paddingHorizontal: 20,
-    marginTop: 24,
+    marginTop: 32, // Increased spacing
   },
   sectionTitle: {
     fontSize: 22,
