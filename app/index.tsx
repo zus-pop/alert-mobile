@@ -30,38 +30,31 @@ export default function Index() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        {/* Main Illustration Banner */}
         <Image
           source={require("@/assets/images/banner.png")}
           style={styles.banner}
           resizeMode="contain"
         />
 
-        {/* Title */}
         <Text style={styles.title}>EWS</Text>
 
-        {/* Subtitle */}
         <Text style={styles.subtitle}>
           Pick Your Next Challenge Pick Your Next Pick Your Next Challenge
         </Text>
 
-        {/* Sign In Button */}
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.signInButton}
           onPress={() => router.push("/login")}
         >
           <Text style={styles.signInButtonText}>Sign In</Text>
         </TouchableOpacity>
 
-        {/* Sign Up Button Placeholder */}
         <View style={styles.signUpButton}>
           <Text style={styles.signUpButtonText}>Sign Up</Text>
         </View>
 
-        {/* Or Divider */}
-        <Text style={styles.orText}>or</Text>
+        <Text style={styles.orText}>or</Text> */}
 
-        {/* Social Login with Google */}
         <TouchableOpacity onPress={login}>
           <View style={styles.socialLoginPlaceholder}>
             <Image
