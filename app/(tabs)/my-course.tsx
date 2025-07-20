@@ -177,7 +177,7 @@ const MyCourse: React.FC = () => {
           }
         >
           {enrollments.length === 0 ? (
-            <View style={styles.emptyContainer}>
+            <View style={styles.emptyContainer} >
               <Image
                 source={require('../../assets/images/coursenotfound.png')}
                 style={styles.emptyImage}
@@ -203,9 +203,19 @@ const MyCourse: React.FC = () => {
                     isSelected && styles.selectedCourseCard
                   ]}
                   activeOpacity={0.9}
-                  onPress={clearSelectedCourse}
+                  onPress={() => {
+                    // Navigate to course-info screen with courseId and enrollmentId
+                    router.push({
+                      pathname: "/course-info",
+                      params: {
+                        courseId: enrollment.courseId?._id,
+                        enrollmentId: enrollment._id
+                      }
+                    });
+                  }}
                 >
-                  <View style={styles.courseContent}>
+                  <View style={styles.courseContent}
+                  >
                     <View style={styles.courseInfo}>
                       <Text style={styles.courseTitle}>
                         {enrollment.courseId.subjectId?.subjectCode} - {enrollment.courseId.subjectId?.subjectName}
