@@ -233,13 +233,7 @@ export default function ProfileScreen() {
                         {enrollment.status}
                       </Text>
                     </View>
-                    {enrollment.grade.length > 0 && (
-                      <View style={{ marginLeft: 8, backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
-                        <Text style={{ color: '#666', fontSize: 12 }}>
-                          Grade: {enrollment.grade[enrollment.grade.length - 1]?.score || 'N/A'}
-                        </Text>
-                      </View>
-                    )}
+                    
                   </View>
                 </View>
               </TouchableOpacity>
