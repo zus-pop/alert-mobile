@@ -15,6 +15,7 @@ interface User {
   isDeleted: boolean;
   updatedAt: string;
   deviceTokens?: string[];
+  curriculumId?: string;
 }
 
 interface AuthState {

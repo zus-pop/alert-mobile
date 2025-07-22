@@ -18,17 +18,49 @@ const MyCourse: React.FC = () => {
   const { selectedCourseId, clearSelectedCourse } = useSelectedCourseStore();
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const fetchSemesters = async () => {
-    try {
-      setSemesterLoading(true);
-      const response = await getSemesters();
-      setSemesters(response.data);
-    } catch (error) {
-      console.error('Error fetching semesters:', error);
-    } finally {
-      setSemesterLoading(false);
+  // Function to find the most recent semester
+  const findMostRecentSemester = (semestersList: Semester[], enrollmentsList: Enrollment[]): string => {
+    if (semestersList.length === 0) {
+      console.log('No semesters available, defaulting to all');
+      return 'all';
     }
+    
+    if (enrollmentsList.length === 0) {
+      console.log('No enrollments available, using most recent semester by date');
+      const sortedByStartDate = [...semestersList].sort((a, b) => 
+        new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+      );
+      return sortedByStartDate[0]._id;
+    }
+
+    // First priority: Find ongoing semester (current date between start and end)
+    const currentDate = new Date();
+    const ongoingSemester = semestersList.find(semester => {
+      const startDate = new Date(semester.startDate);
+      const endDate = new Date(semester.endDate);
+      return currentDate >= startDate && currentDate <= endDate;
+    });
+    
+    if (ongoingSemester) {
+      console.log('Found ongoing semester:', ongoingSemester.semesterName);
+      return ongoingSemester._id;
+    }
+    
+    // Second priority: Most recent semester by start date
+    const sortedByStartDate = [...semestersList].sort((a, b) => 
+      new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+    );
+    
+    if (sortedByStartDate.length > 0) {
+      console.log('Using most recent semester by date:', sortedByStartDate[0].semesterName);
+      return sortedByStartDate[0]._id;
+    }
+    
+    // Final fallback
+    console.log('No suitable semester found, defaulting to all');
+    return 'all';
   };
+
 
   const fetchEnrollments = async () => {
     try {
@@ -47,7 +79,7 @@ const MyCourse: React.FC = () => {
         enrollment.courseId.subjectId !== null
       );
       setAllEnrollments(validEnrollments);
-      setEnrollments(validEnrollments);
+      // Don't set enrollments here - let the useEffect filter handle it
     } catch (error) {
       console.error('Error fetching enrollments:', error);
       setError('Failed to load courses. Please try again.');
@@ -57,23 +89,56 @@ const MyCourse: React.FC = () => {
   };
 
   const filterEnrollmentsBySemester = (semesterId: string) => {
-    if (semesterId === 'all') {
-      setEnrollments(allEnrollments);
-    } else {
-      const filtered = allEnrollments.filter(enrollment => 
+    console.log('Filtering by semester:', semesterId);
+    console.log('Available enrollments:', allEnrollments.length);
+    
+    let filteredBySemester = allEnrollments;
+    
+    // Filter by semester
+    if (semesterId !== 'all' && semesterId) {
+      filteredBySemester = allEnrollments.filter(enrollment => 
         enrollment.courseId.semesterId._id === semesterId
       );
-      setEnrollments(filtered);
+    }
+    
+    setEnrollments(filteredBySemester);
+    console.log('Final enrollments shown:', filteredBySemester.length);
+  };
+
+  const fetchSemesters = async () => {
+    try {
+      setSemesterLoading(true);
+      const response = await getSemesters();
+      setSemesters(response.data);
+    } catch (error) {
+      console.error('Error fetching semesters:', error);
+    } finally {
+      setSemesterLoading(false);
     }
   };
 
+  // Auto-select semester when both semesters and enrollments are loaded
   useEffect(() => {
-    fetchEnrollments();
-    fetchSemesters();
-  }, []);
+    if (semesters.length > 0 && allEnrollments.length > 0) {
+      const recentSemesterId = findMostRecentSemester(semesters, allEnrollments);
+      setSelectedSemester(recentSemesterId);
+      console.log('Auto-selected semester after data load:', recentSemesterId);
+    }
+  }, [semesters, allEnrollments]);
 
   useEffect(() => {
-    filterEnrollmentsBySemester(selectedSemester);
+    const initializeData = async () => {
+      await fetchEnrollments();
+      await fetchSemesters();
+    };
+    initializeData();
+  }, []);
+
+  // Separate useEffect for filtering when semester selection changes
+  useEffect(() => {
+    if (allEnrollments.length > 0) {
+      filterEnrollmentsBySemester(selectedSemester);
+    }
   }, [selectedSemester, allEnrollments]);
 
   // Clear selected course when component unmounts
@@ -90,16 +155,24 @@ const MyCourse: React.FC = () => {
         return;
       }
 
-      const response = await getStudentEnrollments(user._id);
+      // Refresh both enrollments and semesters
+      const [enrollmentsResponse, semestersResponse] = await Promise.all([
+        getStudentEnrollments(user._id),
+        getSemesters()
+      ]);
+
       // Filter out enrollments with null subjectId
-      const validEnrollments = response.data.filter(enrollment =>
+      const validEnrollments = enrollmentsResponse.data.filter(enrollment =>
         enrollment.courseId.subjectId !== null
       );
       setAllEnrollments(validEnrollments);
-      setEnrollments(validEnrollments);
+      
+      // Update semesters (auto-select will be handled by useEffect)
+      setSemesters(semestersResponse.data);
+      
       setError(null);
     } catch (error) {
-      console.error('Error refreshing enrollments:', error);
+      console.error('Error refreshing data:', error);
       setError('Failed to load courses. Please try again.');
     }
   };
