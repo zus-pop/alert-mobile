@@ -66,6 +66,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="curriculum"
+        options={{
+          title: "Curriculum",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={24} name="chevron.left.forwardslash.chevron.right" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="my-course"
         options={{
           title: "My Course",
