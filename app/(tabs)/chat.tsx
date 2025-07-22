@@ -1,13 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { SafeAreaView, StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, StatusBar, Animated, ScrollView } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import axios from 'axios';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import myAxios from '@/utils/my-axios';
-import MarkdownViewer from '../../components/MarkdownViewer';
+import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, FlatList, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MarkdownViewer from '../../components/MarkdownViewer';
 
 const BOT_AVATAR = require('../../assets/images/adaptive-icon.png');
 const USER_AVATAR = require('../../assets/images/avatar.png');
@@ -104,10 +103,10 @@ const Chat: React.FC = () => {
 
   const handleSend = async () => {
     if (!input.trim()) return;
-    
+
     // Hide suggestions after first message
     setShowSuggestions(false);
-    
+
     const now = new Date();
     const newMessage: Message = {
       id: Date.now().toString(),
@@ -116,12 +115,12 @@ const Chat: React.FC = () => {
       time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       read: true,
     };
-    
+
     // Add user message and clear input immediately for better UX
     setMessages((prev) => [...prev, newMessage]);
     const currentInput = input;
     setInput('');
-    
+
     // Add typing indicator
     const typingIndicator: Message = {
       id: 'typing-indicator',
@@ -130,22 +129,22 @@ const Chat: React.FC = () => {
       time: '',
     };
     setMessages((prev) => [...prev, typingIndicator]);
-    
+
     // Auto scroll to bottom
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
     }, 100);
-    
+
     try {
-      const res = await myAxios.post(`${API_URL}/ai/chat`, { 
-        question: currentInput 
+      const res = await myAxios.post(`${API_URL}/ai/chat`, {
+        question: currentInput
       });
-      
+
       let aiText = 'Xin lỗi, tôi không hiểu.';
       if (res.data && typeof res.data === 'object' && typeof res.data.answer === 'string') {
         aiText = res.data.answer;
       }
-      
+
       // Remove typing indicator and add AI response
       setMessages((prev) => {
         const withoutTyping = prev.filter(msg => msg.id !== 'typing-indicator');
@@ -157,10 +156,10 @@ const Chat: React.FC = () => {
         };
         return [...withoutTyping, aiMessage];
       });
-      
+
     } catch (error) {
       console.log('AI API error:', error);
-      
+
       // Remove typing indicator and add error message
       setMessages((prev) => {
         const withoutTyping = prev.filter(msg => msg.id !== 'typing-indicator');
@@ -173,7 +172,7 @@ const Chat: React.FC = () => {
         return [...withoutTyping, errorMessage];
       });
     }
-    
+
     // Auto scroll after response
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
@@ -185,10 +184,10 @@ const Chat: React.FC = () => {
     if (Platform.OS === 'ios') {
       Haptics.selectionAsync();
     }
-    
+
     setInput(suggestion);
     setShowSuggestions(false);
-    
+
     // Auto send after a short delay for better UX
     setTimeout(() => {
       handleSendWithText(suggestion);
@@ -197,7 +196,7 @@ const Chat: React.FC = () => {
 
   const handleSendWithText = async (text: string) => {
     if (!text.trim()) return;
-    
+
     const now = new Date();
     const newMessage: Message = {
       id: Date.now().toString(),
@@ -206,10 +205,10 @@ const Chat: React.FC = () => {
       time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       read: true,
     };
-    
+
     setMessages((prev) => [...prev, newMessage]);
     setInput('');
-    
+
     // Add typing indicator
     const typingIndicator: Message = {
       id: 'typing-indicator',
@@ -218,21 +217,21 @@ const Chat: React.FC = () => {
       time: '',
     };
     setMessages((prev) => [...prev, typingIndicator]);
-    
+
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
     }, 100);
-    
+
     try {
-      const res = await myAxios.post(`${API_URL}/ai/chat`, { 
-        question: text 
+      const res = await myAxios.post(`${API_URL}/ai/chat`, {
+        question: text
       });
-      
+
       let aiText = 'Xin lỗi, tôi không hiểu.';
       if (res.data && typeof res.data === 'object' && typeof res.data.answer === 'string') {
         aiText = res.data.answer;
       }
-      
+
       setMessages((prev) => {
         const withoutTyping = prev.filter(msg => msg.id !== 'typing-indicator');
         const aiMessage: Message = {
@@ -243,10 +242,10 @@ const Chat: React.FC = () => {
         };
         return [...withoutTyping, aiMessage];
       });
-      
+
     } catch (error) {
       console.log('AI API error:', error);
-      
+
       setMessages((prev) => {
         const withoutTyping = prev.filter(msg => msg.id !== 'typing-indicator');
         const errorMessage: Message = {
@@ -258,7 +257,7 @@ const Chat: React.FC = () => {
         return [...withoutTyping, errorMessage];
       });
     }
-    
+
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
     }, 200);
@@ -267,14 +266,14 @@ const Chat: React.FC = () => {
   const renderItem = ({ item, index }: { item: Message; index: number }) => {
     const isUser = item.sender === 'user';
     let userAvatarSource = user?.image ? { uri: user.image } : USER_AVATAR;
-    
+
     // Check if this is typing indicator
     const isTyping = item.id === 'typing-indicator';
-    
+
     return (
       <View style={[styles.row, isUser ? styles.rowEnd : styles.rowStart]}>
         {!isUser && <Image source={BOT_AVATAR} style={styles.avatar} />}
-        <View style={[styles.bubble, isUser ? styles.userBubble : styles.aiBubble]}>  
+        <View style={[styles.bubble, isUser ? styles.userBubble : styles.aiBubble]}>
           {/* Render typing indicator, markdown for AI messages, or plain text for user messages */}
           {isTyping ? (
             <TypingIndicator />
@@ -283,12 +282,12 @@ const Chat: React.FC = () => {
               {String(item.text)}
             </Text>
           ) : (
-            <MarkdownViewer 
-              content={String(item.text)} 
+            <MarkdownViewer
+              content={String(item.text)}
               theme="chat-ai"
             />
           )}
-          
+
           {/* Don't show time for typing indicator */}
           {!isTyping && (
             <View style={styles.metaRow}>
@@ -309,7 +308,7 @@ const Chat: React.FC = () => {
       <StatusBar barStyle="light-content" backgroundColor="#2B3A67" hidden={true} />
       {/* Header */}
       <SafeAreaView style={styles.headerSafeArea}>
-        <View style={styles.header}> 
+        <View style={styles.header}>
           <Image source={BOT_AVATAR} style={styles.headerAvatar} />
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>Happy Bot</Text>
@@ -319,10 +318,10 @@ const Chat: React.FC = () => {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
-      
+
       {/* Chat Messages and Input Area */}
-      <KeyboardAvoidingView 
-        style={styles.chatContainer} 
+      <KeyboardAvoidingView
+        style={styles.chatContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
@@ -339,13 +338,13 @@ const Chat: React.FC = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         />
-        
+
         {/* Message Suggestions */}
         {showSuggestions && (
           <View style={styles.suggestionsContainer}>
             <Text style={styles.suggestionsTitle}>Gợi ý câu hỏi:</Text>
-            <ScrollView 
-              horizontal 
+            <ScrollView
+              horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.suggestionsScrollView}
             >
@@ -362,7 +361,7 @@ const Chat: React.FC = () => {
             </ScrollView>
           </View>
         )}
-        
+
         {/* Input Area với SafeAreaView để handle bottom safe area */}
         <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <View style={styles.inputRow}>
@@ -376,19 +375,19 @@ const Chat: React.FC = () => {
               multiline={false}
               blurOnSubmit={false}
             />
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
-                styles.sendBtn, 
+                styles.sendBtn,
                 isSendDisabled && styles.sendBtnDisabled
-              ]} 
+              ]}
               onPress={handleSend}
               disabled={isSendDisabled}
               activeOpacity={isSendDisabled ? 1 : 0.7}
             >
-              <MaterialIcons 
-                name="send" 
-                size={22} 
-                color={isSendDisabled ? '#999' : '#fff'} 
+              <MaterialIcons
+                name="send"
+                size={22}
+                color={isSendDisabled ? '#999' : '#fff'}
               />
             </TouchableOpacity>
           </View>
@@ -401,9 +400,9 @@ const Chat: React.FC = () => {
 export default Chat;
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#f7f8fa' 
+  container: {
+    flex: 1,
+    backgroundColor: '#f7f8fa'
   },
   headerSafeArea: {
     backgroundColor: '#2B3A67',
@@ -438,7 +437,7 @@ const styles = StyleSheet.create({
   chatContainer: {
     flex: 1,
   },
-  messagesList: { 
+  messagesList: {
     padding: 16,
     flexGrow: 1,
   },
@@ -516,6 +515,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
+    marginBottom: 8,
     borderColor: '#e9ecef',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },

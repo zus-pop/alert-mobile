@@ -1,55 +1,53 @@
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Platform,
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { setUser as fetchUserFromAPI } from '../../apis/auth.api';
+import { Combo, getComboById } from '../../apis/combos.api';
 import { Curriculum, getCurriculumById } from '../../apis/curriculums.api';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 const CurriculumScreen: React.FC = () => {
   const [curriculum, setCurriculum] = useState<Curriculum | null>(null);
+  const [combo, setCombo] = useState<Combo | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user, setUser } = useAuthStore();
+  const { user } = useAuthStore();
 
   const fetchUserCurriculum = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      // Debug user data
-      console.log('=== CURRICULUM DEBUG ===');
-      console.log('Current user data:', user);
-      console.log('User curriculumId:', user?.curriculumId);
-      console.log('========================');
-
+      console.log("user", user)
       if (!user?.curriculumId) {
-        console.log('No curriculumId found for user');
         setError('No curriculum assigned to this user.');
         setCurriculum(null);
         return;
       }
 
-      console.log('Fetching curriculum with ID:', user.curriculumId);
-      const response = await getCurriculumById(user.curriculumId);
-      console.log('Curriculum API response:', response);
-      
-      // Handle different response structures
-      const curriculumData = response.data || response;
-      console.log('Curriculum data to set:', curriculumData);
+      // Fetch curriculum by ID and handle API response
+      const curriculumData = await getCurriculumById(user.curriculumId, user._id);
       setCurriculum(curriculumData);
-      console.log('Curriculum state updated successfully');
+      if (curriculumData.comboId) {
+        try {
+          const comboData = await getComboById(curriculumData.comboId);
+          setCombo(comboData);
+        } catch (err) {
+          setCombo(null);
+        }
+      } else {
+        setCombo(null);
+      }
     } catch (error) {
       console.error('Error fetching user curriculum:', error);
       setError('Failed to load curriculum. Please try again.');
@@ -59,35 +57,30 @@ const CurriculumScreen: React.FC = () => {
     }
   };
 
-  const refreshUserData = async () => {
-    try {
-      console.log('Refreshing user data from API...');
-      const updatedUser = await fetchUserFromAPI();
-      console.log('Updated user data:', updatedUser);
-      setUser(updatedUser);
-      return updatedUser;
-    } catch (error) {
-      console.error('Error refreshing user data:', error);
-      throw error;
-    }
-  };
 
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
-      
-      // First refresh user data to get latest curriculumId
-      const updatedUser = await refreshUserData();
-      
-      if (!updatedUser?.curriculumId) {
+
+
+      if (!user?.curriculumId) {
         setError('No curriculum assigned to this user.');
         setCurriculum(null);
         return;
       }
 
-      const response = await getCurriculumById(updatedUser.curriculumId);
-      const curriculumData = response.data || response;
+      const curriculumData = await getCurriculumById(user.curriculumId, user._id);
       setCurriculum(curriculumData);
+      if (curriculumData.comboId) {
+        try {
+          const comboData = await getComboById(curriculumData.comboId);
+          setCombo(comboData);
+        } catch (err) {
+          setCombo(null);
+        }
+      } else {
+        setCombo(null);
+      }
       setError(null);
     } catch (error) {
       console.error('Error refreshing curriculum:', error);
@@ -102,33 +95,89 @@ const CurriculumScreen: React.FC = () => {
     fetchUserCurriculum();
   }, [user?.curriculumId]);
 
-  const renderSubjectItem = ({ item }: { item: any }) => (
-    <View style={styles.subjectItem}>
-      <View style={styles.subjectHeader}>
-        <View style={styles.subjectMainInfo}>
-          {item.subjectCode && (
-            <Text style={styles.subjectCode}>{item.subjectCode}</Text>
-          )}
-          <Text style={styles.subjectName}>
-            {item.subjectName || 'Untitled Subject'}
-          </Text>
-        </View>
-        <View style={styles.subjectMetaInfo}>
-          <View style={styles.semesterBadge}>
-            <Text style={styles.semesterText}>Semester {item.semesterNumber || 1}</Text>
+  const renderSubjectItem = ({ item }: { item: any }) => {
+    // studentData có thể là mảng hoặc object, tùy vào cấu trúc API
+    // Giả sử là mảng, lấy studentData đầu tiên
+    const studentData = Array.isArray(item.studentData) ? item.studentData[0] : item.studentData;
+    // Determine status style
+    const getStatusStyle = (status: string) => {
+      switch (status) {
+        case 'PASSED':
+          return [styles.statusBadge, styles.statusPassed];
+        case 'IN PROGRESS':
+          return [styles.statusBadge, styles.statusInProgress];
+        case 'NOT PASSED':
+          return [styles.statusBadge, styles.statusNotPassed];
+        default:
+          return [styles.statusBadge];
+      }
+    };
+    const getStatusTextStyle = (status: string) => {
+      switch (status) {
+        case 'PASSED':
+          return [styles.statusText, styles.statusPassedText];
+        case 'IN PROGRESS':
+          return [styles.statusText, styles.statusInProgressText];
+        case 'NOT PASSED':
+          return [styles.statusText, styles.statusNotPassedText];
+        default:
+          return [styles.statusText];
+      }
+    };
+
+    return (
+      <View style={styles.subjectItem}>
+        <View style={styles.subjectHeader}>
+          <View style={styles.subjectMainInfo}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              {item.subjectCode && (
+                <Text style={styles.subjectCode}>{item.subjectCode}</Text>
+              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+
+                {item.credit !== undefined && (
+                  <View style={styles.creditsBadge}>
+                    <Text style={styles.creditsText}>{item.credit} credits</Text>
+                  </View>
+                )}
+                {item.semesterNumber !== undefined && (
+                  <View style={styles.semesterBadge}>
+                    <Text style={styles.semesterText}>Semester {item.semesterNumber}</Text>
+                  </View>
+                )}
+
+              </View>
+            </View>
+            <Text style={styles.subjectName}>
+              {item.subjectName || 'Untitled Subject'}
+            </Text>
+
+            {(studentData?.status || (studentData?.finalGrade !== undefined && studentData?.finalGrade !== null)) && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+                {studentData?.status && (
+                  <View style={styles.statusContainer}>
+                    <Text style={styles.statusLabel}>Status: </Text>
+                    <View style={getStatusStyle(studentData.status)}>
+                      <Text style={getStatusTextStyle(studentData.status)}>
+                        {studentData.status}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+                {(studentData?.finalGrade !== undefined && studentData?.finalGrade !== null) && (
+                  <View style={styles.finalGradeBadge}>
+                    <Text style={styles.finalGradeText}>Final Grade: {studentData.finalGrade}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
           </View>
-          <View style={styles.creditsBadge}>
-            <Text style={styles.creditsText}>{item.credits || 3} credits</Text>
-          </View>
+          {/* ...existing code... */}
         </View>
       </View>
-      {item.description && (
-        <Text style={styles.subjectDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
-      )}
-    </View>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -158,9 +207,6 @@ const CurriculumScreen: React.FC = () => {
             <TouchableOpacity style={styles.retryButton} onPress={fetchUserCurriculum}>
               <Text style={styles.retryText}>Retry</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.retryButton, styles.refreshButton]} onPress={refreshUserData}>
-              <Text style={styles.retryText}>Refresh User Data</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </SafeAreaView>
@@ -179,9 +225,6 @@ const CurriculumScreen: React.FC = () => {
           <Text style={styles.emptyDescription}>
             You don't have a curriculum assigned yet. Please contact your administrator.
           </Text>
-          <TouchableOpacity style={[styles.retryButton, styles.refreshButton, {marginTop: 20}]} onPress={refreshUserData}>
-            <Text style={styles.retryText}>Refresh User Data</Text>
-          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -209,10 +252,15 @@ const CurriculumScreen: React.FC = () => {
         <View style={styles.curriculumCard}>
           <View style={styles.curriculumHeader}>
             <View style={styles.curriculumInfo}>
-              {curriculum.curriculumCode && (
-                <Text style={styles.curriculumCode}>{curriculum.curriculumCode}</Text>
-              )}
               <Text style={styles.curriculumName}>{curriculum.curriculumName || 'Untitled Curriculum'}</Text>
+              {combo && (
+                <View style={{ marginTop: 8 }}>
+                  <Text style={styles.curriculumCode}>Combo: {combo.comboCode} - {combo.comboName}</Text>
+                  {combo.description && (
+                    <Text style={{ fontSize: 13, color: '#666', marginTop: 2 }}>Description: {combo.description}</Text>
+                  )}
+                </View>
+              )}
             </View>
             <View style={styles.curriculumStats}>
               <View style={styles.subjectCount}>
@@ -221,17 +269,12 @@ const CurriculumScreen: React.FC = () => {
               </View>
             </View>
           </View>
-          
-          {curriculum.description && (
-            <Text style={styles.curriculumDescription}>
-              {curriculum.description}
-            </Text>
-          )}
 
           {curriculum.subjects && curriculum.subjects.length > 0 && (
             <View style={styles.subjectsContainer}>
+              <Text style={styles.subjectsTitle}>Subjects</Text>
               <FlatList
-                data={curriculum.subjects.sort((a, b) => (a.semesterNumber || 1) - (b.semesterNumber || 1))}
+                data={[...curriculum.subjects].sort((a, b) => (a.semesterNumber || 1) - (b.semesterNumber || 1))}
                 renderItem={renderSubjectItem}
                 keyExtractor={(subject, index) => subject._id || `subject-${index}`}
                 scrollEnabled={false}
@@ -379,6 +422,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  finalGradeBadge: {
+    backgroundColor: '#E0F7FA',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginTop: 6,
+    alignSelf: 'flex-start',
+  },
+  finalGradeText: {
+    color: '#0097A7',
+    fontWeight: '700',
+    fontSize: 12,
+  },
   subjectCount: {
     alignItems: 'center',
   },
@@ -459,6 +515,45 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     color: '#FF9800',
+  },
+
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  statusLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginRight: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 4,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statusPassed: {
+    backgroundColor: '#E8F5E8',
+  },
+  statusPassedText: {
+    color: '#4CAF50',
+  },
+  statusInProgress: {
+    backgroundColor: '#FFF3E0',
+  },
+  statusInProgressText: {
+    color: '#FF9800',
+  },
+  statusNotPassed: {
+    backgroundColor: '#FFEBEE',
+  },
+  statusNotPassedText: {
+    color: '#F44336',
   },
   subjectDescription: {
     fontSize: 12,
