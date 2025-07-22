@@ -137,7 +137,7 @@ const Chat: React.FC = () => {
     }, 100);
     
     try {
-      const res = await myAxios.post(`${API_URL}/api/ai/chat`, { 
+      const res = await myAxios.post(`${API_URL}/ai/chat`, { 
         question: currentInput 
       });
       
@@ -224,7 +224,7 @@ const Chat: React.FC = () => {
     }, 100);
     
     try {
-      const res = await myAxios.post(`${API_URL}/api/ai/chat`, { 
+      const res = await myAxios.post(`${API_URL}/ai/chat`, { 
         question: text 
       });
       

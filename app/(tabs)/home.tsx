@@ -24,9 +24,7 @@ import myAxios from "../../utils/my-axios";
 const avatar = require("../../assets/images/avatar.png");
 const bell = require("../../assets/images/bell.png");
 const uiDesign = require("../../assets/images/uiDesign.png");
-const uxDesign = require("../../assets/images/uxDesign.png");
-const webDesign = require("../../assets/images/webDesign.png");
-const wireframe = require("../../assets/images/wireframe.png");
+
 const excel = require("../../assets/images/excel.png");
 const weeklyRead = require("../../assets/images/weeklyRead.png");
 

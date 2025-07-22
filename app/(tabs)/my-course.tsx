@@ -1,17 +1,34 @@
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Platform, RefreshControl, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Platform, RefreshControl, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Enrollment, getStudentEnrollments } from '../../apis/enrollments.api';
+import { Semester, getSemesters } from '../../apis/semesters.api';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useSelectedCourseStore } from '../../stores/useSelectedCourseStore';
 
 const MyCourse: React.FC = () => {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [allEnrollments, setAllEnrollments] = useState<Enrollment[]>([]);
+  const [semesters, setSemesters] = useState<Semester[]>([]);
+  const [selectedSemester, setSelectedSemester] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+  const [semesterLoading, setSemesterLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuthStore();
   const { selectedCourseId, clearSelectedCourse } = useSelectedCourseStore();
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const fetchSemesters = async () => {
+    try {
+      setSemesterLoading(true);
+      const response = await getSemesters();
+      setSemesters(response.data);
+    } catch (error) {
+      console.error('Error fetching semesters:', error);
+    } finally {
+      setSemesterLoading(false);
+    }
+  };
 
   const fetchEnrollments = async () => {
     try {
@@ -29,6 +46,7 @@ const MyCourse: React.FC = () => {
       const validEnrollments = response.data.filter(enrollment =>
         enrollment.courseId.subjectId !== null
       );
+      setAllEnrollments(validEnrollments);
       setEnrollments(validEnrollments);
     } catch (error) {
       console.error('Error fetching enrollments:', error);
@@ -38,9 +56,25 @@ const MyCourse: React.FC = () => {
     }
   };
 
+  const filterEnrollmentsBySemester = (semesterId: string) => {
+    if (semesterId === 'all') {
+      setEnrollments(allEnrollments);
+    } else {
+      const filtered = allEnrollments.filter(enrollment => 
+        enrollment.courseId.semesterId._id === semesterId
+      );
+      setEnrollments(filtered);
+    }
+  };
+
   useEffect(() => {
     fetchEnrollments();
+    fetchSemesters();
   }, []);
+
+  useEffect(() => {
+    filterEnrollmentsBySemester(selectedSemester);
+  }, [selectedSemester, allEnrollments]);
 
   // Clear selected course when component unmounts
   useEffect(() => {
@@ -61,6 +95,7 @@ const MyCourse: React.FC = () => {
       const validEnrollments = response.data.filter(enrollment =>
         enrollment.courseId.subjectId !== null
       );
+      setAllEnrollments(validEnrollments);
       setEnrollments(validEnrollments);
       setError(null);
     } catch (error) {
@@ -93,7 +128,6 @@ const MyCourse: React.FC = () => {
       year: 'numeric'
     });
   };
-
 
   const getDisplayGrade = (enrollment: Enrollment) => {
     if (enrollment.finalGrade !== undefined && enrollment.finalGrade !== null) {
@@ -139,6 +173,34 @@ const MyCourse: React.FC = () => {
     );
   };
 
+  const renderSemesterChip = ({ item }: { item: { id: string; name: string } }) => {
+    const isSelected = selectedSemester === item.id;
+    return (
+      <TouchableOpacity
+        style={[
+          styles.semesterChip,
+          isSelected && styles.selectedSemesterChip
+        ]}
+        onPress={() => setSelectedSemester(item.id)}
+      >
+        <Text style={[
+          styles.semesterChipText,
+          isSelected && styles.selectedSemesterChipText
+        ]}>
+          {item.name}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // Prepare semester data for FlatList (all semesters from API, sorted by date)
+  const semesterData = semesters
+    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+    .map(semester => ({
+      id: semester._id,
+      name: semester.semesterName
+    }));
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" hidden={true} />
@@ -146,6 +208,28 @@ const MyCourse: React.FC = () => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Courses</Text>
       </View>
+
+      {/* Semester Filter */}
+      {semesterData.length > 0 && (
+        <View style={styles.filterContainer}>
+          {semesterLoading ? (
+            <View style={styles.semesterLoadingContainer}>
+              <ActivityIndicator size="small" color="#2B3A67" />
+              <Text style={styles.semesterLoadingText}>Loading semesters...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={semesterData}
+              renderItem={renderSemesterChip}
+              keyExtractor={(item) => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.semesterListContainer}
+              style={styles.semesterList}
+            />
+          )}
+        </View>
+      )}
 
       {/* Loading State */}
       {loading ? (
@@ -183,13 +267,20 @@ const MyCourse: React.FC = () => {
                 style={styles.emptyImage}
                 resizeMode="contain"
               />
-              <Text style={styles.emptyTitle}>No Courses</Text>
-              <Text style={styles.emptyDescription}>
-                Looks like you have not enrolled for any course yet
+              <Text style={styles.emptyTitle}>
+                {selectedSemester === 'all' ? 'No Courses' : 'No Courses Found'}
               </Text>
-              <TouchableOpacity style={styles.exploreCourseButton}>
-                <Text style={styles.exploreCourseText}>Explore Courses</Text>
-              </TouchableOpacity>
+              <Text style={styles.emptyDescription}>
+                {selectedSemester === 'all' 
+                  ? 'Looks like you have not enrolled for any course yet'
+                  : 'No courses found for the selected semester'
+                }
+              </Text>
+              {selectedSemester === 'all' && (
+                <TouchableOpacity style={styles.exploreCourseButton}>
+                  <Text style={styles.exploreCourseText}>Explore Courses</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             enrollments.map((enrollment, index) => {
@@ -309,6 +400,62 @@ const styles = StyleSheet.create({
     color: '#2B3A67',
   },
 
+  // Semester Filter Styles
+  filterContainer: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2B3A67',
+    marginBottom: 12,
+  },
+  semesterLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  semesterLoadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#666',
+  },
+  semesterList: {
+    flexGrow: 0,
+  },
+  semesterListContainer: {
+    paddingRight: 20,
+  },
+  semesterChip: {
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 12,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedSemesterChip: {
+    backgroundColor: '#2B3A67',
+    borderColor: '#2B3A67',
+  },
+  semesterChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#2B3A67',
+  },
+  selectedSemesterChipText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
 
   loadingContainer: {
     flex: 1,
