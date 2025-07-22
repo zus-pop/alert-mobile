@@ -4,18 +4,24 @@ export interface Subject {
     _id: string;
     subjectCode: string;
     subjectName: string;
-    credits: number;
-    description?: string;
+    semesterNumber?: number;
+    studentData?: StudentData;
+    credit?: number;
 }
 
+export interface StudentData {
+    status: string;
+    enrollmentId?: string;
+    finalGrade?: string;
+}
 export interface Curriculum {
     _id: string;
     curriculumName: string;
-    curriculumCode?: string;
-    description?: string;
+    comboId?: string;
     subjects: Subject[];
     createdAt: string;
     updatedAt: string;
+    __v?: number;
 }
 
 export interface CurriculumResponse {
@@ -24,17 +30,11 @@ export interface CurriculumResponse {
     totalPage: number;
 }
 
-export interface SingleCurriculumResponse {
-    data: Curriculum;
-}
-
-// Alternative type for direct curriculum response
-export type CurriculumAPIResponse = Curriculum | SingleCurriculumResponse;
 
 // Get all curriculums
 export const getCurriculums = async (
     curriculumName?: string,
-    curriculumCode?: string,
+    comboId?: string,
     order?: string,
     page?: number,
     limit?: number
@@ -42,7 +42,7 @@ export const getCurriculums = async (
     const params = new URLSearchParams();
 
     if (curriculumName) params.append('curriculumName', curriculumName);
-    if (curriculumCode) params.append('curriculumCode', curriculumCode);
+    if (comboId) params.append('comboId', comboId);
     if (order) params.append('order', order);
     if (page) params.append('page', page.toString());
     if (limit) params.append('limit', limit.toString());
@@ -50,14 +50,17 @@ export const getCurriculums = async (
     const queryString = params.toString();
     const url = `curriculums${queryString ? `?${queryString}` : ''}`;
 
-    const response = await myAxios.get<CurriculumResponse>(url);
+    const response = await myAxios.get(url);
     return response.data;
 };
 
 // Get curriculum by ID
-export const getCurriculumById = async (curriculumId: string): Promise<CurriculumAPIResponse> => {
-    const response = await myAxios.get(`curriculums/${curriculumId}`);
-    console.log('Raw API response for curriculum:', response);
+export const getCurriculumById = async (curriculumId: string | undefined, studentId?: string): Promise<Curriculum> => {
+    let url = `curriculums/${curriculumId}`;
+    if (studentId) {
+        url += `?studentId=${studentId}`;
+    }
+    const response = await myAxios.get(url);
     console.log('Response data:', response.data);
     return response.data;
 }; 

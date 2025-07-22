@@ -24,10 +24,10 @@ const MyCourse: React.FC = () => {
       console.log('No semesters available, defaulting to all');
       return 'all';
     }
-    
+
     if (enrollmentsList.length === 0) {
       console.log('No enrollments available, using most recent semester by date');
-      const sortedByStartDate = [...semestersList].sort((a, b) => 
+      const sortedByStartDate = [...semestersList].sort((a, b) =>
         new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
       );
       return sortedByStartDate[0]._id;
@@ -40,22 +40,22 @@ const MyCourse: React.FC = () => {
       const endDate = new Date(semester.endDate);
       return currentDate >= startDate && currentDate <= endDate;
     });
-    
+
     if (ongoingSemester) {
       console.log('Found ongoing semester:', ongoingSemester.semesterName);
       return ongoingSemester._id;
     }
-    
+
     // Second priority: Most recent semester by start date
-    const sortedByStartDate = [...semestersList].sort((a, b) => 
+    const sortedByStartDate = [...semestersList].sort((a, b) =>
       new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
     );
-    
+
     if (sortedByStartDate.length > 0) {
       console.log('Using most recent semester by date:', sortedByStartDate[0].semesterName);
       return sortedByStartDate[0]._id;
     }
-    
+
     // Final fallback
     console.log('No suitable semester found, defaulting to all');
     return 'all';
@@ -91,16 +91,16 @@ const MyCourse: React.FC = () => {
   const filterEnrollmentsBySemester = (semesterId: string) => {
     console.log('Filtering by semester:', semesterId);
     console.log('Available enrollments:', allEnrollments.length);
-    
+
     let filteredBySemester = allEnrollments;
-    
+
     // Filter by semester
     if (semesterId !== 'all' && semesterId) {
-      filteredBySemester = allEnrollments.filter(enrollment => 
+      filteredBySemester = allEnrollments.filter(enrollment =>
         enrollment.courseId.semesterId._id === semesterId
       );
     }
-    
+
     setEnrollments(filteredBySemester);
     console.log('Final enrollments shown:', filteredBySemester.length);
   };
@@ -166,10 +166,10 @@ const MyCourse: React.FC = () => {
         enrollment.courseId.subjectId !== null
       );
       setAllEnrollments(validEnrollments);
-      
+
       // Update semesters (auto-select will be handled by useEffect)
       setSemesters(semestersResponse.data);
-      
+
       setError(null);
     } catch (error) {
       console.error('Error refreshing data:', error);
@@ -344,7 +344,7 @@ const MyCourse: React.FC = () => {
                 {selectedSemester === 'all' ? 'No Courses' : 'No Courses Found'}
               </Text>
               <Text style={styles.emptyDescription}>
-                {selectedSemester === 'all' 
+                {selectedSemester === 'all'
                   ? 'Looks like you have not enrolled for any course yet'
                   : 'No courses found for the selected semester'
                 }

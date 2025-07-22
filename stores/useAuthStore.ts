@@ -10,12 +10,14 @@ interface User {
   email: string;
   gender: string;
   image?: string;
+  majorId: string;
+  comboId: string;
+  curriculumId: string;
   studentCode: string;
   deletedAt: string | null;
   isDeleted: boolean;
   updatedAt: string;
   deviceTokens?: string[];
-  curriculumId?: string;
 }
 
 interface AuthState {

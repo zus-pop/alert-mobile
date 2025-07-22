@@ -62,6 +62,7 @@ export default function Index() {
               style={styles.googleIcon}
               resizeMode="contain"
             />
+            <Text style={styles.signInButtonText}>Login with Google</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -103,37 +104,17 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginBottom: 32,
   },
-  signInButton: {
-    width: 220,
-    height: 60,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    opacity: 0.7,
-  },
+
   signInButtonText: {
+    marginLeft: 30,
     color: "#272323",
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: "700",
-    fontFamily: "Montserrat",
-  },
-  signUpButton: {
-    width: 220,
-    height: 60,
-    backgroundColor: "rgba(255,255,255,0.4)",
-    borderRadius: 16,
-    alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
-  },
-  signUpButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
     fontFamily: "Montserrat",
+    marginBottom: 2,
   },
+
   orText: {
     color: "#fff",
     fontSize: 14,
@@ -142,16 +123,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   socialLoginPlaceholder: {
-    width: 60,
+    width: 300,
     height: 60,
     backgroundColor: "#fff",
     borderRadius: 16,
     alignItems: "center",
+
     justifyContent: "center",
     marginBottom: 16,
   },
   googleIcon: {
+    position: "absolute",
     width: 600,
-    marginLeft: 40,
+    height: 80,
+    marginRight: 150,
   },
 });
