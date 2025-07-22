@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { useAuthStore } from "../stores";
 
 const myAxios = axios.create({
-  baseURL: `${process.env.EXPO_PUBLIC_API_URL}/api/`, // replace with actual API base URL
+  baseURL: `${process.env.EXPO_PUBLIC_API_URL}`, // replace with actual API base URL
 });
 
 myAxios.interceptors.request.use((config) => {

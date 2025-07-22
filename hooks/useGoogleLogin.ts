@@ -7,7 +7,7 @@ export function useGoogleLogin() {
     const redirectUri = Linking.createURL("/auth");
     const authUrl = `${
       process.env.EXPO_PUBLIC_API_URL
-    }/api/auth/google?path=${encodeURIComponent(redirectUri)}`;
+    }/auth/google?path=${encodeURIComponent(redirectUri)}`;
 
     const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
