@@ -35,7 +35,7 @@ export default function ProfileScreen() {
     if (!user?._id) return;
 
     try {
-      const response = await getStudentEnrollments(user._id);
+      const response = await getStudentEnrollments(user._id, undefined, undefined, 100);
       setEnrollments(response.data);
       setEnrollmentStats(response.groupByEnrollmentStatus || []);
     } catch (error) {
