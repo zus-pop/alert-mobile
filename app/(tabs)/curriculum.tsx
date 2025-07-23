@@ -274,7 +274,7 @@ const CurriculumScreen: React.FC = () => {
             <View style={styles.subjectsContainer}>
               <Text style={styles.subjectsTitle}>Subjects</Text>
               <FlatList
-                data={[...curriculum.subjects].sort((a, b) => (a.semesterNumber || 1) - (b.semesterNumber || 1))}
+                data={[...curriculum.subjects].sort((a, b) => (a.semesterNumber || -1) - (b.semesterNumber || -1))}
                 renderItem={renderSubjectItem}
                 keyExtractor={(subject, index) => subject._id || `subject-${index}`}
                 scrollEnabled={false}

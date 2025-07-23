@@ -411,6 +411,7 @@ const CourseInfo = () => {
   const tabItems = [
     { name: 'home', title: 'Home', icon: 'house.fill', route: '/(tabs)/home' },
     { name: 'chat', title: 'Chat', icon: 'chat.fill', route: '/(tabs)/chat' },
+    { name: 'curriculum', title: 'Curriculum', icon: 'chevron.left.forwardslash.chevron.right', route: '/(tabs)/curriculum' },
     { name: 'my-course', title: 'My Course', icon: 'book.fill', route: '/(tabs)/my-course' },
     { name: 'profile', title: 'My Profile', icon: 'person.fill', route: '/(tabs)/profile' }
   ];
