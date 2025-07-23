@@ -348,14 +348,14 @@ const HomeScreen: React.FC = () => {
               <View key={enrollment._id} style={styles.courseCard}>
                 <TouchableOpacity
                   onPress={() => {
-                      router.push({
-                        pathname: "/course-info",
-                        params: {
-                          courseId: enrollment.courseId?._id,
-                          enrollmentId: enrollment._id
-                        }
-                      });
-                    }}
+                    router.push({
+                      pathname: "/course-info",
+                      params: {
+                        courseId: enrollment.courseId?._id,
+                        enrollmentId: enrollment._id
+                      }
+                    });
+                  }}
                   style={styles.courseImageContainer}
                 >
                   {enrollment.courseId?.image ? (
@@ -375,13 +375,12 @@ const HomeScreen: React.FC = () => {
                   <Text style={styles.courseCardDesc} numberOfLines={1} ellipsizeMode="tail">
                     {enrollment.courseId?.semesterId?.semesterName || ""}
                   </Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.keepLearningBtn}
                     onPress={() => {
                       router.push({
                         pathname: "/course-info",
                         params: {
-                          courseId: enrollment.courseId?._id,
                           enrollmentId: enrollment._id
                         }
                       });
