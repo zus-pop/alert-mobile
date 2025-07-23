@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -125,8 +126,27 @@ const CurriculumScreen: React.FC = () => {
       }
     };
 
+    // Nếu có enrollmentId thì cho phép chuyển trang
+    const handlePressSubject = () => {
+      if (studentData?.enrollmentId) {
+        // Sử dụng expo-router
+        router.push({
+          pathname: '/course-info',
+          params: {
+            enrollmentId: studentData.enrollmentId,
+          },
+        });
+      }
+    };
+
+    const Wrapper = studentData?.enrollmentId ? TouchableOpacity : View;
+
     return (
-      <View style={styles.subjectItem}>
+      <Wrapper
+        style={styles.subjectItem}
+        onPress={studentData?.enrollmentId ? handlePressSubject : undefined}
+        activeOpacity={0.7}
+      >
         <View style={styles.subjectHeader}>
           <View style={styles.subjectMainInfo}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -175,7 +195,7 @@ const CurriculumScreen: React.FC = () => {
           </View>
           {/* ...existing code... */}
         </View>
-      </View>
+      </Wrapper>
     );
   };
 

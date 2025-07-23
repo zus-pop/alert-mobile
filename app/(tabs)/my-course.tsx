@@ -372,7 +372,6 @@ const MyCourse: React.FC = () => {
                     router.push({
                       pathname: "/course-info",
                       params: {
-                        courseId: enrollment.courseId?._id,
                         enrollmentId: enrollment._id
                       }
                     });

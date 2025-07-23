@@ -1,3 +1,4 @@
+import { getStudentEnrollments } from '@/apis/enrollments.api';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -14,30 +15,26 @@ import {
   View,
 } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
-import { CourseData, getCourseById } from '../apis/courses.api';
-import { Enrollment, getStudentEnrollments } from '../apis/enrollments.api';
-import { 
-  getStudentEnrollmentById, 
-  getStudentAttendances, 
-  StudyProgress, 
+import type { Enrollment } from '../apis/enrollments.api';
+import {
   AttendanceRecord,
-  StudentEnrollment 
+  getStudentAttendances,
+  getStudentEnrollmentById,
+  StudentEnrollment
 } from '../apis/students.api';
-import { useAuthStore } from '../stores/useAuthStore';
 import { IconSymbol } from '../components/ui/IconSymbol';
+import { useAuthStore } from '../stores/useAuthStore';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 const CourseInfo = () => {
-  const { courseId, enrollmentId } = useLocalSearchParams<{ courseId: string; enrollmentId?: string }>();
-  const [course, setCourse] = useState<CourseData | null>(null);
-  const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
+  const { enrollmentId } = useLocalSearchParams<{ enrollmentId?: string }>();
   const [studentEnrollment, setStudentEnrollment] = useState<StudentEnrollment | null>(null);
-  const [studyProgress, setStudyProgress] = useState<StudyProgress | null>(null);
+  const [enrollment, setEnrollment] = useState<Enrollment | null>(null); // Sử dụng đúng kiểu
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedGrade, setSelectedGrade] = useState<{type: string, score: number, weight: number} | null>(null);
+  const [selectedGrade, setSelectedGrade] = useState<{ type: string, score: number, weight: number } | null>(null);
   const { user } = useAuthStore();
 
   // Helper functions consolidated
@@ -58,7 +55,7 @@ const CourseInfo = () => {
 
   const attendanceColors = ['#22C55E', '#EF4444', '#9CA3AF'];
   const attendanceLabels = ['Attended', 'Absent', 'Not Yet'];
-  
+
   const getStatusInfo = (status: string) => statusMap[status?.toUpperCase()] || { color: '#6B7280', icon: 'help-circle-outline' };
 
   useEffect(() => {
@@ -66,8 +63,8 @@ const CourseInfo = () => {
       try {
         setLoading(true);
         setError(null);
-        
-        if (!courseId) {
+
+        if (!enrollmentId) {
           setError('Course ID is required.');
           return;
         }
@@ -77,33 +74,19 @@ const CourseInfo = () => {
           return;
         }
 
-        // Fetch course details
-        const courseResponse = await getCourseById(courseId);
-        const courseData = courseResponse.data || courseResponse;
-        
-        if (!courseData) {
-          setError('Course data not found.');
-          return;
+        // Fetch enrollment populate để lấy subject/semester
+        try {
+
+          const enrollmentsResponse = await getStudentEnrollments(user._id);
+          const found = enrollmentsResponse.data.find((enr: Enrollment) => enr._id === enrollmentId);
+          setEnrollment(found || null);
+        } catch (error) {
+          console.error('Error fetching enrollment populate:', error);
         }
-        
-        setCourse(courseData);
-
-        // Find user's enrollment for this course
-        const enrollmentsResponse = await getStudentEnrollments(user._id);
-        const userEnrollment = enrollmentsResponse.data.find(
-          (enr) => enr.courseId?._id === courseId
-        );
-
-        if (!userEnrollment) {
-          setError('You are not enrolled in this course.');
-          return;
-        }
-
-        setEnrollment(userEnrollment);
 
         // Fetch detailed student enrollment data
         try {
-          const studentEnrollmentResponse = await getStudentEnrollmentById(user._id, userEnrollment._id);
+          const studentEnrollmentResponse = await getStudentEnrollmentById(user._id, enrollmentId);
           setStudentEnrollment(studentEnrollmentResponse.data || studentEnrollmentResponse);
         } catch (error) {
           console.error('Error fetching student enrollment details:', error);
@@ -111,7 +94,7 @@ const CourseInfo = () => {
 
         // Fetch attendance records
         try {
-          const attendanceResponse = await getStudentAttendances(user._id, userEnrollment._id);
+          const attendanceResponse = await getStudentAttendances(user._id, enrollmentId);
           setAttendances(attendanceResponse);
         } catch (error) {
           console.error('Error fetching attendance records:', error);
@@ -126,7 +109,7 @@ const CourseInfo = () => {
     };
 
     fetchCourseDetails();
-  }, [courseId, user?._id]);
+  }, [enrollmentId, user?._id]);
 
   // Calculate attendance statistics
   const attendanceStats = (() => {
@@ -144,18 +127,18 @@ const CourseInfo = () => {
     const centerY = size / 2;
     const radius = size / 2 - 20;
     const strokeWidth = 16;
-    
+
     const total = attendanceStats.totalSessions;
     const percentages = total > 0 ? [
       attendanceStats.presentCount / total,
       attendanceStats.absentCount / total,
       attendanceStats.notYetCount / total
     ] : [0, 0, 0];
-    
+
     const gapAngle = 4;
     const availableAngle = 360 - (3 * gapAngle);
     const angles = percentages.map(p => p * availableAngle);
-    
+
     const createArcPath = (startAngle: number, endAngle: number, innerRadius: number, outerRadius: number) => {
       const start = startAngle * (Math.PI / 180);
       const end = endAngle * (Math.PI / 180);
@@ -170,7 +153,7 @@ const CourseInfo = () => {
       const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
       return `M ${x1} ${y1} L ${x2} ${y2} A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${x3} ${y3} L ${x4} ${y4} A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x1} ${y1}`;
     };
-    
+
     let currentAngle = -90;
     const innerRadius = radius - strokeWidth / 2;
     const outerRadius = radius + strokeWidth / 2;
@@ -216,29 +199,29 @@ const CourseInfo = () => {
     }
 
     return (
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={true}
         style={styles.gradeScrollView}
         contentContainerStyle={styles.gradeScrollContent}
       >
         <View style={styles.gradeContainer}>
           {studentEnrollment.grade.map((grade, index) => (
-            <TouchableOpacity 
-              key={index} 
+            <TouchableOpacity
+              key={index}
               style={styles.gradeItem}
               onPress={() => setSelectedGrade(grade)}
               activeOpacity={0.7}
             >
               <View style={styles.gradeBarContainer}>
-                <View 
+                <View
                   style={[
-                    styles.gradeBar, 
-                    { 
+                    styles.gradeBar,
+                    {
                       height: `${Math.max((grade.score / 10) * 100, 8)}%`,
                       backgroundColor: gradeHelpers.getColor(grade.score)
                     }
-                  ]} 
+                  ]}
                 />
                 <Text style={styles.gradeScore}>{grade.score.toFixed(1)}</Text>
               </View>
@@ -281,14 +264,14 @@ const CourseInfo = () => {
       type: grade.type
     }));
 
-    const linePath = points.map((point, index) => 
+    const linePath = points.map((point, index) =>
       `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`
     ).join(' ');
 
     return (
       <View style={styles.successChartContainer}>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={true}
           style={styles.chartScrollView}
           contentContainerStyle={styles.chartScrollContent}
@@ -301,7 +284,7 @@ const CourseInfo = () => {
                   <Stop offset="100%" stopColor="#3B82F6" stopOpacity="0.05" />
                 </LinearGradient>
               </Defs>
-              
+
               {[2, 4, 6, 8].map((score) => (
                 <Path
                   key={score}
@@ -311,7 +294,7 @@ const CourseInfo = () => {
                   strokeDasharray="2,2"
                 />
               ))}
-              
+
               {linePath && (
                 <Path
                   d={linePath}
@@ -322,7 +305,7 @@ const CourseInfo = () => {
                   strokeLinejoin="round"
                 />
               )}
-              
+
               {points.map((point, index) => (
                 <Circle
                   key={index}
@@ -335,16 +318,16 @@ const CourseInfo = () => {
                 />
               ))}
             </Svg>
-            
+
             <View style={[styles.gradeLabelsContainer, { width: dynamicWidth }]}>
               {grades.map((grade, index) => {
                 const labelX = padding + (index * (graphWidth / Math.max(grades.length - 1, 1)));
                 return (
-                  <View 
-                    key={index} 
+                  <View
+                    key={index}
                     style={[
                       styles.gradeLabelItem,
-                      { 
+                      {
                         position: 'absolute',
                         left: labelX - 30,
                         width: 60
@@ -376,14 +359,14 @@ const CourseInfo = () => {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Grade Details</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setSelectedGrade(null)}
                 style={styles.closeButton}
               >
                 <Ionicons name="close" size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.gradeDetailContainer}>
               <View style={[styles.gradeColorIndicator, { backgroundColor: gradeHelpers.getColor(selectedGrade.score) }]} />
               <View style={styles.gradeDetailInfo}>
@@ -396,7 +379,7 @@ const CourseInfo = () => {
               </View>
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setSelectedGrade(null)}
             >
@@ -465,15 +448,20 @@ const CourseInfo = () => {
 
   if (loading || error) return renderLoadingOrError();
 
-  const overallGrade = studentEnrollment?.finalGrade || 
-    (studentEnrollment?.grade?.length 
-      ? studentEnrollment.grade.reduce((sum, g) => sum + (g.score * g.weight), 0) 
+  const overallGrade = studentEnrollment?.finalGrade ||
+    (studentEnrollment?.grade?.length
+      ? studentEnrollment.grade.reduce((sum, g) => sum + (g.score * g.weight), 0)
       : 0);
 
+  // Lấy subjectName, subjectCode, semesterName từ enrollment (getStudentEnrollments)
+  const subjectName = enrollment?.courseId?.subjectId?.subjectName || 'N/A';
+  const subjectCode = enrollment?.courseId?.subjectId?.subjectCode || 'N/A';
+  const semesterName = enrollment?.courseId?.semesterId?.semesterName || 'N/A';
+
   const courseDetails = [
-    { icon: 'book-outline', label: 'Subject', value: course?.subjectId?.subjectName || 'N/A' },
-    { icon: 'code-outline', label: 'Course Code', value: course?.subjectId?.subjectCode || 'N/A' },
-    { icon: 'calendar-outline', label: 'Semester', value: course?.semesterId?.semesterName || 'N/A' },
+    { icon: 'book-outline', label: 'Subject', value: subjectName },
+    { icon: 'code-outline', label: 'Course Code', value: subjectCode },
+    { icon: 'calendar-outline', label: 'Semester', value: semesterName },
     { icon: 'stats-chart-outline', label: 'Attendance', value: `${attendanceStats.presentCount}/${attendanceStats.totalSessions} sessions attended (${attendanceStats.attendanceRate}%)` },
     ...(enrollment ? [{ icon: getStatusInfo(enrollment.status).icon, label: 'Status', value: enrollment.status, color: getStatusInfo(enrollment.status).color }] : [])
   ];
@@ -481,10 +469,10 @@ const CourseInfo = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
+
       {/* Back Button */}
       <View style={styles.backButtonContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.push('/(tabs)/my-course')}
           activeOpacity={0.7}
@@ -571,10 +559,10 @@ const CourseInfo = () => {
           </View>
         </View>
       </ScrollView>
-      
+
       {/* Bottom Tab Navigation */}
       {renderBottomTabs()}
-      
+
       {/* Grade Detail Modal */}
       {renderGradeModal()}
     </SafeAreaView>
