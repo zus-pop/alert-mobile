@@ -186,7 +186,7 @@ const CurriculumScreen: React.FC = () => {
                 )}
                 {(studentData?.finalGrade !== undefined && studentData?.finalGrade !== null) && (
                   <View style={styles.finalGradeBadge}>
-                    <Text style={styles.finalGradeText}>Final Grade: {studentData.finalGrade}</Text>
+                    <Text style={styles.finalGradeText}>Final Grade: {studentData.finalGrade.toFixed(1)}</Text>
                   </View>
                 )}
               </View>

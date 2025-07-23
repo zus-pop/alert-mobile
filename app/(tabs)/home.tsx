@@ -89,7 +89,7 @@ const HomeScreen: React.FC = () => {
     const fetchEnrollments = async () => {
       if (!user?._id) return;
       try {
-        const res = await getStudentEnrollments(user._id);
+        const res = await getStudentEnrollments(user._id, undefined, undefined, 100);
         const enrollmentsData = res.data || [];
         setEnrollments(enrollmentsData);
 
@@ -205,7 +205,7 @@ const HomeScreen: React.FC = () => {
 
       // Fetch enrollments
       if (user?._id) {
-        const enrollmentsResponse = await getStudentEnrollments(user._id);
+        const enrollmentsResponse = await getStudentEnrollments(user._id, undefined, undefined, 100);
         const enrollmentsData = enrollmentsResponse.data || [];
         setEnrollments(enrollmentsData);
 

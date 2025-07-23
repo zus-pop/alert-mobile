@@ -72,7 +72,7 @@ const MyCourse: React.FC = () => {
         return;
       }
 
-      const response = await getStudentEnrollments(user._id);
+      const response = await getStudentEnrollments(user._id, undefined, undefined, 100);
       console.log('Fetched enrollments:', response.data);
       // Filter out enrollments with null subjectId
       const validEnrollments = response.data.filter(enrollment =>
@@ -108,7 +108,7 @@ const MyCourse: React.FC = () => {
   const fetchSemesters = async () => {
     try {
       setSemesterLoading(true);
-      const response = await getSemesters();
+      const response = await getSemesters(undefined, undefined, undefined, undefined, undefined, 100);
       setSemesters(response.data);
     } catch (error) {
       console.error('Error fetching semesters:', error);
@@ -157,8 +157,8 @@ const MyCourse: React.FC = () => {
 
       // Refresh both enrollments and semesters
       const [enrollmentsResponse, semestersResponse] = await Promise.all([
-        getStudentEnrollments(user._id),
-        getSemesters()
+        getStudentEnrollments(user._id, undefined, undefined, 100),
+        getSemesters(undefined, undefined, undefined, undefined, undefined, 100)
       ]);
 
       // Filter out enrollments with null subjectId
@@ -204,7 +204,7 @@ const MyCourse: React.FC = () => {
 
   const getDisplayGrade = (enrollment: Enrollment) => {
     if (enrollment.finalGrade !== undefined && enrollment.finalGrade !== null) {
-      return enrollment.finalGrade;
+      return Number(enrollment.finalGrade.toFixed(1));
     }
     return null;
   };

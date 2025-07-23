@@ -77,7 +77,7 @@ const CourseInfo = () => {
         // Fetch enrollment populate để lấy subject/semester
         try {
 
-          const enrollmentsResponse = await getStudentEnrollments(user._id);
+                     const enrollmentsResponse = await getStudentEnrollments(user._id, undefined, undefined, 100);
           const found = enrollmentsResponse.data.find((enr: Enrollment) => enr._id === enrollmentId);
           setEnrollment(found || null);
         } catch (error) {
@@ -335,7 +335,7 @@ const CourseInfo = () => {
                     ]}
                   >
                     <Text style={styles.gradeChartLabel}>{grade.type}</Text>
-                    <Text style={styles.gradeChartScore}>{grade.score}</Text>
+                    <Text style={styles.gradeChartScore}>{grade.score.toFixed(1)}</Text>
                   </View>
                 );
               })}
